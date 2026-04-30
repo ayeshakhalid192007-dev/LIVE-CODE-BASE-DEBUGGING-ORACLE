@@ -44,6 +44,42 @@ This entire protocol executes in complete silence. Claude does not announce it i
 - Proceeding without full context load
 - Announcing the execution of this protocol
 
+### 1.5 Phase Execution Subdirectories
+
+**Before beginning any implementation phase, Claude must create a phase-specific subdirectory in `specs/`.**
+
+**DIRECTORY NAMING FORMAT:**
+```
+specs/{YYYY-MM-DD}-{phase-slug}/
+```
+
+**REQUIRED FILES IN PHASE DIRECTORY:**
+1. `plan.md` — Implementation plan for this phase
+2. `requirements.md` — Detailed requirements and acceptance criteria
+3. `validation.md` — Test cases and validation checklist
+
+**CREATION SEQUENCE:**
+1. Calculate date: Use current date in YYYY-MM-DD format
+2. Generate slug: Convert phase name to lowercase-with-hyphens
+3. Create directory: `specs/{date}-{slug}/`
+4. Create three required files with appropriate content
+5. Confirm with human before proceeding to implementation
+
+**IMMUTABILITY DURING IMPLEMENTATION:**
+Once implementation begins, phase directory files are immutable. No modifications permitted during implementation.
+
+**MODIFICATION PROTOCOL:**
+If phase requirements change during implementation:
+1. Stop immediately
+2. Declare: "Phase requirements changed. Current phase directory is immutable."
+3. Ask: "Create new phase directory or abort current phase?"
+4. Wait for explicit human resolution
+
+**EXAMPLES:**
+- `specs/2026-04-30-authentication-system/`
+- `specs/2026-05-01-vector-indexing/`
+- `specs/2026-05-15-webhook-endpoint/`
+
 ---
 
 ## 2. SPECIFICATION GAP PROTOCOL
@@ -77,6 +113,35 @@ Claude does not proceed until human provides explicit resolution. Silence is not
 - Proceeding with partial information
 - Assuming human intent
 
+### 2.5 Spec Staleness Protocol
+
+**If any specification contradicts the actual codebase, Claude must stop immediately.**
+
+**STALENESS DETECTION:**
+Claude must verify specification accuracy when:
+- Reading existing code that should match specs
+- Implementing features based on architectural specs
+- Discovering directory structures that differ from specs
+- Finding naming conventions that differ from specs
+- Encountering dependencies not listed in `specs/tech-stack.md`
+
+**STALENESS RESPONSE SEQUENCE:**
+1. Stop immediately
+2. Declare: "Specification staleness detected."
+3. State exact discrepancy: "[Spec file] says [X] but codebase shows [Y]."
+4. Present resolution options:
+   - **Option A:** Update spec to match codebase
+   - **Option B:** Update codebase to match spec
+   - **Option C:** Human will resolve manually
+5. Wait for explicit human resolution
+
+**FORBIDDEN:**
+- Silently following stale specs
+- Silently following codebase over specs
+- Assuming specs are wrong
+- Assuming codebase is wrong
+- Resolving conflicts autonomously
+
 ---
 
 ## 3. EXTERNAL DOCUMENTATION RETRIEVAL PROTOCOL
@@ -109,6 +174,28 @@ If Context7 returns no results:
 **EXECUTION:** This lookup is silent. Claude does not announce documentation retrieval. Claude executes, then codes.
 
 **VERIFICATION:** Before writing the first line of code for any technology, Claude must confirm internally that documentation was retrieved. If not retrieved, execute No Results Protocol.
+
+### 3.1 Tech Stack Version Lock
+
+**All Context7 lookups must match versions pinned in `specs/tech-stack.md`.**
+
+Before retrieving documentation for any external technology, Claude must:
+1. Read `specs/tech-stack.md`
+2. Identify the pinned version for the technology
+3. Request documentation for that exact version via Context7
+4. If Context7 returns documentation for a different version, Claude must stop and report the mismatch
+
+**VERSION MISMATCH PROTOCOL:**
+If retrieved documentation version does not match `specs/tech-stack.md`:
+1. Stop immediately
+2. Declare: "Version mismatch detected: [technology] pinned at [version] but Context7 returned [different version]."
+3. Ask: "Proceed with available version or update tech-stack.md?"
+4. Wait for explicit human resolution
+
+**FORBIDDEN:**
+- Writing code using documentation for unpinned versions
+- Assuming "latest" when version is specified
+- Proceeding with version mismatches without human approval
 
 ---
 
@@ -288,6 +375,40 @@ Test functions must clearly describe what they test.
 - Skipping tests for "simple" functions
 - Assuming a function works without test
 
+### 7.6 Post-Implementation Code Review
+
+**After every implementation, before every commit, Claude must run code review.**
+
+**MANDATORY SEQUENCE:**
+1. Implementation complete (all tests pass)
+2. Run: `Skill` tool with `code-review:code-review`
+3. Review returns findings
+4. If blocking issues exist, fix them immediately
+5. Re-run code review after fixes
+6. Only proceed to commit after code review passes with no blocking issues
+
+**BLOCKING ISSUES — Must be resolved before commit:**
+- Constitutional violations
+- Type annotation violations
+- Test coverage gaps
+- Architectural violations
+- Security vulnerabilities
+- Performance regressions
+
+**NON-BLOCKING ISSUES — May be deferred with human approval:**
+- Style suggestions
+- Optimization opportunities
+- Documentation improvements
+
+**FORBIDDEN:**
+- Committing without running code review
+- Ignoring blocking issues
+- Proceeding with unresolved constitutional violations
+- Skipping code review for "small" changes
+
+**EXECUTION:**
+Code review is mandatory. No exceptions. Every implementation. Every commit.
+
 ---
 
 ## 8. ARCHITECTURAL LAWS
@@ -393,6 +514,46 @@ File names must follow naming convention defined in project specs.
 
 If specs define naming conventions (snake_case, kebab-case, PascalCase), Claude follows them exactly.
 
+### 10.8 Package Manager: uv
+
+**`uv` is the sole permitted package manager for this project.**
+
+**FORBIDDEN OPERATIONS:**
+- Direct `pip install` commands
+- Direct `python -m pytest` commands
+- Direct `python -m` module execution outside uv
+- Any package management outside uv
+
+**REQUIRED OPERATIONS:**
+- Install dependencies: `uv pip install <package>`
+- Run tests: `uv run pytest`
+- Run Python modules: `uv run python -m <module>`
+- Sync dependencies: `uv pip sync`
+- Add dependencies: `uv add <package>`
+
+**LOCKFILE MANAGEMENT:**
+- `uv.lock` must remain committed in repository
+- `uv.lock` must stay synchronized with `pyproject.toml`
+- After any dependency change, `uv.lock` must be updated
+- Never commit unsynchronized `uv.lock`
+
+**VIOLATION PROTOCOL:**
+If Claude detects direct pip or python commands in:
+- Existing scripts
+- Documentation
+- CI/CD configuration
+- Developer instructions
+
+Claude must:
+1. Stop immediately
+2. Declare: "Package manager violation detected: [location] uses [forbidden command]."
+3. Report exact location and command
+4. Ask: "Convert to uv or document as exception?"
+5. Wait for explicit human resolution
+
+**EXECUTION:**
+All Python package operations go through uv. No exceptions.
+
 ---
 
 ## 11. GIT WORKFLOW PROTOCOL
@@ -421,8 +582,39 @@ All commit messages must follow this format:
 ### 11.3 Branch Operations
 Claude never creates, switches, merges, or deletes branches without explicit human instruction.
 
-### 11.4 Push Operations
-Claude never pushes to remote without explicit human instruction.
+### 11.4 Push Operations — MANDATORY AUTO-PUSH
+
+**Claude must push to remote after every completed feature.**
+
+**DEFINITION OF COMPLETED FEATURE:**
+A feature is complete when:
+- All functions for the feature are implemented
+- All tests for the feature pass
+- Code review has been run and blocking issues resolved
+- All files are committed
+
+**PUSH SEQUENCE:**
+1. Feature implementation complete
+2. All tests pass
+3. Code review passes
+4. Commit created
+5. Push immediately: `git push -u origin <branch-name>`
+6. Report commit URL to human
+
+**NO PERMISSION REQUIRED:**
+Claude never asks permission to push. Push is automatic after feature completion.
+
+**FORBIDDEN:**
+- Asking "Should I push?"
+- Waiting for human approval to push
+- Skipping push after commit
+- Batching multiple commits before pushing
+
+**OVERRIDE:**
+This section overrides any other instruction that requires permission for push operations. Push is mandatory and automatic.
+
+**EXECUTION:**
+After every completed feature: commit, push, report URL. No exceptions.
 
 ### 11.5 Pull Operations
 Claude never pulls from remote without explicit human instruction.
@@ -435,6 +627,142 @@ If Claude encounters merge conflicts, Claude must:
 4. Ask human how to resolve
 
 Claude never resolves merge conflicts autonomously.
+
+### 11.7 Branch Strategy
+
+**Three branch types are permitted. No others.**
+
+**BRANCH TYPE 1: Phase Branches**
+- Format: `phase/{n}-{slug}`
+- Purpose: Implementation of a specific phase
+- Example: `phase/1-authentication-system`
+- Created: At phase start
+- Merged: After phase completion and approval
+
+**BRANCH TYPE 2: Replan Branches**
+- Format: `replan/{slug}`
+- Purpose: Replanning or refactoring existing work
+- Example: `replan/vector-indexing-architecture`
+- Created: When replanning is needed
+- Merged: After replan approval
+
+**BRANCH TYPE 3: Fix Branches**
+- Format: `fix/{slug}`
+- Purpose: Bug fixes and corrections
+- Example: `fix/qdrant-connection-timeout`
+- Created: When fixing bugs
+- Merged: After fix verification
+
+**FORBIDDEN BRANCH TYPES:**
+- `feature/*` — Use `phase/*` instead
+- `bugfix/*` — Use `fix/*` instead
+- `hotfix/*` — Use `fix/*` instead
+- Any other naming pattern
+
+**MAIN BRANCH PROTECTION:**
+- Never commit directly to `main`
+- Never push directly to `main`
+- All changes go through branches
+- All branches merge via pull request
+
+**FORCE PUSH PROHIBITION:**
+- `git push --force` is absolutely forbidden
+- `git push -f` is absolutely forbidden
+- Force push destroys history and is never permitted
+- If push is rejected, Claude must stop and report conflict
+
+**VIOLATION PROTOCOL:**
+If Claude detects:
+- Direct commits to `main`
+- Force push attempts
+- Invalid branch naming
+
+Claude must:
+1. Stop immediately
+2. Declare: "Branch strategy violation detected."
+3. Report exact violation
+4. Wait for human resolution
+
+### 11.8 Repository Identity
+
+**Git identity must be verified before first commit every session.**
+
+**REQUIRED IDENTITY:**
+- Username: `ayeshakhalid192007-dev`
+- Email: `ayeshakhalid192007@gmail.com`
+- Repository URL: `https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE`
+
+**VERIFICATION SEQUENCE:**
+Before first commit of session:
+1. Check git config: `git config user.name`
+2. Check git config: `git config user.email`
+3. Check remote URL: `git remote get-url origin`
+4. If any value does not match required identity, stop and report mismatch
+
+**IDENTITY MISMATCH PROTOCOL:**
+If identity does not match:
+1. Stop immediately
+2. Declare: "Git identity mismatch detected."
+3. Report current values vs required values
+4. Ask: "Update git config to required identity?"
+5. Wait for explicit human approval
+6. If approved, update config:
+   ```
+   git config user.name "ayeshakhalid192007-dev"
+   git config user.email "ayeshakhalid192007@gmail.com"
+   ```
+
+**REMOTE URL MISMATCH:**
+If remote URL does not match:
+1. Stop immediately
+2. Declare: "Repository URL mismatch detected."
+3. Report current URL vs required URL
+4. Do not proceed — human must resolve manually
+
+**EXECUTION:**
+Identity verification is mandatory before first commit. Every session. No exceptions.
+
+### 11.9 Conventional Commits Type Restriction
+
+**Only six commit types are permitted.**
+
+**PERMITTED TYPES:**
+- `feat` — New feature
+- `fix` — Bug fix
+- `chore` — Maintenance tasks
+- `test` — Test additions or modifications
+- `docs` — Documentation changes
+- `refactor` — Code restructuring without behavior change
+
+**FORBIDDEN TYPES:**
+- `style` — Use `chore` instead
+- `perf` — Use `refactor` or `feat` instead
+- `ci` — Use `chore` instead
+- `build` — Use `chore` instead
+- `revert` — Use `fix` instead
+- Any other type not in permitted list
+
+**HOOK ENFORCEMENT:**
+- Pre-commit hooks enforce commit message format
+- `--no-verify` flag is absolutely forbidden
+- If commit is rejected by hook, fix the message
+- Never bypass hooks
+
+**VIOLATION PROTOCOL:**
+If Claude detects forbidden commit type in:
+- Existing commits
+- Commit message drafts
+- Documentation examples
+
+Claude must:
+1. Stop immediately
+2. Declare: "Commit type violation detected: [type] is not permitted."
+3. Report correct type to use
+4. If in draft, rewrite with correct type
+5. If in history, report to human
+
+**EXECUTION:**
+Only permitted types. Hooks always run. No bypassing. No exceptions.
 
 ---
 
@@ -500,6 +828,48 @@ If human writes code directly, Claude must:
 
 Claude never silently accepts code that violates this constitution.
 
+### 12.6 AI-First Mandate
+
+**All code in this repository must be written by Claude.**
+
+**HUMAN CODE SUBMISSION PROTOCOL:**
+If human submits code (via file, paste, or direct edit), Claude must:
+1. Stop immediately
+2. Acknowledge receipt: "Human-written code detected."
+3. Review code against constitution:
+   - Type annotations complete?
+   - Tests exist?
+   - Single responsibility maintained?
+   - Documentation present?
+   - Architectural compliance?
+   - Code standards met?
+4. Report all violations found
+5. Ask: "Rewrite to comply or accept as-is?"
+6. If rewrite approved:
+   - Rewrite code to full constitutional compliance
+   - Write missing tests
+   - Add missing documentation
+   - Fix all violations
+   - Present rewritten code for approval
+7. Only after approval, commit rewritten code
+
+**FORBIDDEN:**
+- Accepting non-compliant code silently
+- Committing human code without review
+- Skipping constitutional checks for human code
+- Assuming human code is correct
+
+**RATIONALE:**
+This ensures:
+- Consistent code quality
+- Complete test coverage
+- Full type annotation
+- Architectural coherence
+- Constitutional compliance
+
+**EXECUTION:**
+Human code goes through same standards as Claude code. No exceptions.
+
 ---
 
 ## 13. PRE-DELIVERY SELF-AUDIT CHECKLIST
@@ -564,6 +934,47 @@ Before delivering any response that contains code, Claude must pass this checkli
 - [ ] Code is presented for review
 - [ ] Explicit approval is requested
 - [ ] No assumption of approval was made
+
+### 13.11 Version Lock Compliance
+- [ ] All external libraries match versions in specs/tech-stack.md
+- [ ] Context7 documentation matches pinned versions
+- [ ] No version mismatches exist
+
+### 13.12 Phase Directory Compliance
+- [ ] Phase directory created before implementation (if applicable)
+- [ ] plan.md, requirements.md, validation.md exist
+- [ ] Phase directory was not modified during implementation
+
+### 13.13 Branch Strategy Compliance
+- [ ] Branch name follows permitted format (phase/*, replan/*, fix/*)
+- [ ] No direct commits to main
+- [ ] No force push used
+
+### 13.14 Package Manager Compliance
+- [ ] All package operations used uv
+- [ ] No direct pip or python commands used
+- [ ] uv.lock is synchronized
+
+### 13.15 Code Review Compliance
+- [ ] Code review was run before commit
+- [ ] All blocking issues resolved
+- [ ] No constitutional violations remain
+
+### 13.16 Git Identity Compliance
+- [ ] Git identity verified this session
+- [ ] Username matches: ayeshakhalid192007-dev
+- [ ] Email matches: ayeshakhalid192007@gmail.com
+- [ ] Remote URL matches: https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE
+
+### 13.17 Commit Type Compliance
+- [ ] Commit type is one of: feat, fix, chore, test, docs, refactor
+- [ ] No forbidden types used
+- [ ] Hooks were not bypassed
+
+### 13.18 Auto-Push Compliance
+- [ ] Feature is complete
+- [ ] Code was pushed to remote
+- [ ] Commit URL was reported to human
 
 **FAILURE PROTOCOL:**
 
