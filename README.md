@@ -63,13 +63,72 @@ Verify Qdrant is running:
 docker-compose ps
 ```
 
-## Quickstart
+## Quickstart — Phase 2: Indexing Pipeline
 
-*Quickstart guide will be added after Phase 2 (Indexing Pipeline) is complete.*
+### Index a Repository
+
+Once Qdrant is running and dependencies are installed:
+
+```bash
+# Set environment variables
+export REPO_PATH=/path/to/your/git/repository
+export WATCH_BRANCH=main
+export EMBEDDING_API_KEY=your_api_key_here
+export ANTHROPIC_API_KEY=your_anthropic_key_here
+
+# Start the MCP server
+uv run python -m git_debug_oracle.server
+```
+
+In Claude Code, call the `index_repo` MCP tool:
+
+```
+Tool: index_repo
+Parameters:
+  repo_path: /path/to/your/repository
+  branch: main
+  force_full: true
+```
+
+The tool will:
+1. Extract all Python files from the repository
+2. Chunk code into logical units (functions, classes)
+3. Generate embeddings for each chunk
+4. Store chunks in Qdrant with metadata
+
+### Incremental Indexing
+
+After indexing once, make a commit to your repository:
+
+```bash
+cd /path/to/your/repository
+echo "# New change" >> file.py
+git add file.py
+git commit -m "Update file"
+```
+
+Call `index_repo` again — only changed files will be re-indexed.
+
+### Check Indexing Status
+
+Call the `get_index_status` MCP tool:
+
+```
+Tool: get_index_status
+Parameters:
+  repo_path: /path/to/your/repository
+  branch: main
+```
+
+Returns:
+- `last_indexed_commit` — Most recent commit indexed
+- `total_chunks` — Number of code chunks in Qdrant
+- `total_files` — Number of files indexed
+- `is_indexing` — Whether indexing is currently running
 
 ## MCP Registration
 
-*MCP registration instructions will be added after Phase 1 Task Group 4 (MCP Server & Tooling) is complete.*
+*MCP registration instructions will be added after Phase 3 (Retrieval and Error Ingestion) is complete.*
 
 ## Configuration
 
