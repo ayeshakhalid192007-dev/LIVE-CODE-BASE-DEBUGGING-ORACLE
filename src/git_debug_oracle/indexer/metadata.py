@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime
+from typing import Any
 
 from git_debug_oracle.types import CodeChunk
 from git_debug_oracle.utils.logging import get_logger
@@ -39,7 +40,7 @@ def generate_chunk_id(
 
 
 def extract_chunk_metadata(
-    chunk_dict: dict[str, any], file_path: str, commit_metadata: dict[str, str]
+    chunk_dict: dict[str, Any], file_path: str, commit_metadata: dict[str, str]
 ) -> CodeChunk:
     """Extract chunk metadata and create CodeChunk instance.
 

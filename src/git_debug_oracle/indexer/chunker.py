@@ -1,7 +1,7 @@
 """AST-based code chunking for Python files."""
 
 import ast
-from typing import Optional
+from typing import Any, Optional
 
 from git_debug_oracle.utils.logging import get_logger
 
@@ -94,7 +94,7 @@ def chunk_function(
     source_lines: list[str],
     chunk_size: int,
     overlap: int,
-) -> list[dict[str, any]]:
+) -> list[dict[str, Any]]:
     """Chunk a function into smaller pieces if it exceeds chunk_size.
 
     Args:
@@ -139,7 +139,7 @@ def chunk_function(
 
 def chunk_file(
     file_path: str, content: str, chunk_size: int, overlap: int
-) -> list[dict[str, any]]:
+) -> list[dict[str, Any]]:
     """Chunk a Python file into logical units based on AST.
 
     Args:
@@ -173,7 +173,7 @@ def chunk_file(
         logger.debug("No functions found, chunking entire file", file_path=file_path)
         return chunk_entire_file(content, chunk_size, overlap)
 
-    chunks: list[dict[str, any]] = []
+    chunks: list[dict[str, Any]] = []
 
     for func_node in functions:
         func_chunks = chunk_function(func_node, source_lines, chunk_size, overlap)
@@ -189,7 +189,7 @@ def chunk_file(
     return chunks
 
 
-def chunk_entire_file(content: str, chunk_size: int, overlap: int) -> list[dict[str, any]]:
+def chunk_entire_file(content: str, chunk_size: int, overlap: int) -> list[dict[str, Any]]:
     """Chunk entire file when no functions are found.
 
     Args:
@@ -210,7 +210,7 @@ def chunk_entire_file(content: str, chunk_size: int, overlap: int) -> list[dict[
             }
         ]
 
-    chunks: list[dict[str, any]] = []
+    chunks: list[dict[str, Any]] = []
     lines = content.splitlines(keepends=True)
     current_chunk_lines: list[str] = []
     current_chunk_start = 1

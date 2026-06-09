@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from git import Repo
-from git.exc import GitCommandError, InvalidGitRepositoryError
+from git.exc import GitCommandError, InvalidGitRepositoryError, NoSuchPathError
 
 from git_debug_oracle.utils.logging import get_logger
 
@@ -62,8 +62,21 @@ def extract_files_from_commit(
         InvalidGitRepositoryError: If repo_path is not a valid Git repository
         GitCommandError: If commit_hash does not exist
     """
-    repo = Repo(repo_path)
-    commit = repo.commit(commit_hash)
+    try:
+        repo = Repo(repo_path)
+    except (InvalidGitRepositoryError, NoSuchPathError) as e:
+        logger.error("Invalid repository path", path=repo_path, error=str(e))
+        raise InvalidGitRepositoryError(f"Invalid repository: {repo_path}") from e
+    
+    try:
+        commit = repo.commit(commit_hash)
+    except Exception as e:
+        logger.error(
+            "Invalid commit hash",
+            commit_hash=commit_hash,
+            error=str(e),
+        )
+        raise GitCommandError("git", str(e)) from e
 
     files: list[tuple[str, str]] = []
 
@@ -110,8 +123,21 @@ def get_commit_metadata(repo_path: str, commit_hash: str) -> dict[str, str]:
         InvalidGitRepositoryError: If repo_path is not a valid Git repository
         GitCommandError: If commit_hash does not exist
     """
-    repo = Repo(repo_path)
-    commit = repo.commit(commit_hash)
+    try:
+        repo = Repo(repo_path)
+    except InvalidGitRepositoryError:
+        logger.error("Path is not a valid Git repository", path=repo_path)
+        raise
+    
+    try:
+        commit = repo.commit(commit_hash)
+    except Exception as e:
+        logger.error(
+            "Invalid commit hash",
+            commit_hash=commit_hash,
+            error=str(e),
+        )
+        raise GitCommandError("git", str(e)) from e
 
     metadata = {
         "hash": commit.hexsha,

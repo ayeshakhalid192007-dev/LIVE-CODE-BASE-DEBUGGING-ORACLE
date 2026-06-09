@@ -161,7 +161,11 @@ def test_set_last_indexed_commit_uses_correct_point_id(
 
     call_args = mock_qdrant_wrapper.client.upsert.call_args
     points = call_args.kwargs["points"]
-    assert points[0].id == "branch_feature_branch"
+    
+    # Point ID should be integer
+    assert isinstance(points[0].id, int)
+    # Point payload should contain branch name
+    assert points[0].payload["branch"] == branch
 
 
 def test_get_all_tracked_branches_returns_branch_list(
@@ -234,12 +238,19 @@ def test_get_all_tracked_branches_filters_invalid_payloads(
 
 
 def test_branch_to_point_id_format(commit_tracker: CommitTracker) -> None:
-    """Test _branch_to_point_id generates correct format."""
+    """Test _branch_to_point_id generates deterministic integer."""
     result = commit_tracker._branch_to_point_id("main")
-    assert result == "branch_main"
+    assert isinstance(result, int)
+    assert result > 0
 
-    result = commit_tracker._branch_to_point_id("feature/new-feature")
-    assert result == "branch_feature/new-feature"
+    # Same branch should generate same ID
+    result2 = commit_tracker._branch_to_point_id("main")
+    assert result == result2
+
+    # Different branch should generate different ID
+    result3 = commit_tracker._branch_to_point_id("feature/new-feature")
+    assert result3 != result
+    assert isinstance(result3, int)
 
 
 def test_set_and_get_last_indexed_commit_integration(

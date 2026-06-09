@@ -36,8 +36,11 @@ def mock_qdrant_wrapper(mock_config: Config) -> QdrantClientWrapper:
         QdrantClientWrapper instance
     """
     wrapper = Mock(spec=QdrantClientWrapper)
-    wrapper.client = MagicMock()
+    wrapper._client = MagicMock()
+    wrapper.client = wrapper._client
+    wrapper._config = mock_config
     wrapper.config = mock_config
+    wrapper._qdrant = wrapper
     wrapper.collection_name = "test_collection"
     wrapper.create_collection_if_missing = QdrantClientWrapper.create_collection_if_missing.__get__(wrapper)
     wrapper.delete_chunks_by_file = QdrantClientWrapper.delete_chunks_by_file.__get__(wrapper)

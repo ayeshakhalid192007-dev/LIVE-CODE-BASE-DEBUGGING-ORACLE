@@ -1,7 +1,6 @@
 """OpenAI embedding client with retry logic."""
 
 import time
-from typing import Optional
 
 from openai import OpenAI
 

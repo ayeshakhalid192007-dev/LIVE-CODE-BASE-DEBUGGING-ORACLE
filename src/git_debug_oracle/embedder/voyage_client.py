@@ -1,7 +1,6 @@
 """Voyage AI embedding client with retry logic."""
 
 import time
-from typing import Optional
 
 import voyageai
 

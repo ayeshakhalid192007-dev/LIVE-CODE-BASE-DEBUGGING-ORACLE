@@ -62,13 +62,14 @@ def get_index_status(
             }
 
         collection_info = qdrant_wrapper.get_collection_info(config.qdrant_collection)
+        last_indexed_timestamp = tracker.get_last_indexed_timestamp(branch)
 
         result = {
             "status": "indexed",
             "repo_path": repo_path,
             "branch": branch,
             "last_indexed_commit": last_indexed_commit,
-            "last_indexed_timestamp": tracker.get_last_indexed_commit(branch),
+            "last_indexed_timestamp": last_indexed_timestamp,
             "total_chunks": collection_info.get("points_count", 0),
             "total_files": collection_info.get("vectors_count", 0),
             "collection_name": config.qdrant_collection,

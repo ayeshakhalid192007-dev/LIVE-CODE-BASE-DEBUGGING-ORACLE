@@ -1,5 +1,6 @@
 """Indexing pipeline orchestration for Git repositories."""
 
+import gc
 import psutil
 from datetime import datetime
 from typing import Optional
@@ -10,6 +11,7 @@ from git_debug_oracle.git_watcher.repo_reader import (
     get_commits_in_range,
     validate_repo,
 )
+from git_debug_oracle.git_watcher.commit_tracker import CommitTracker
 from git_debug_oracle.indexer.file_filter import should_index_file_with_gitignore
 from git_debug_oracle.indexer.chunker import chunk_file
 from git_debug_oracle.indexer.metadata import extract_chunk_metadata
@@ -99,7 +101,6 @@ class IndexingPipeline:
             self.qdrant.create_collection_if_missing(self.qdrant.collection_name)
             self.qdrant.upsert_chunks(embedded_chunks)
 
-            from git_debug_oracle.git_watcher.commit_tracker import CommitTracker
             tracker = CommitTracker(self.qdrant)
             tracker.set_last_indexed_commit(branch, commit_hash, datetime.now())
 
@@ -279,5 +280,4 @@ class IndexingPipeline:
                 memory_usage_mb=memory_usage / 1_048_576,
                 limit_mb=MEMORY_LIMIT_BYTES / 1_048_576,
             )
-            import gc
             gc.collect()

@@ -1,5 +1,6 @@
 """Multi-branch commit tracking using Qdrant metadata collection."""
 
+import hashlib
 from datetime import datetime
 from typing import Optional
 
@@ -75,6 +76,42 @@ class CommitTracker:
             )
             return None
 
+    def get_last_indexed_timestamp(self, branch: str) -> Optional[str]:
+        """Get the last indexed timestamp for a branch.
+
+        Args:
+            branch: Branch name
+
+        Returns:
+            ISO format timestamp string if branch has been indexed, None otherwise
+        """
+        try:
+            point_id = self._branch_to_point_id(branch)
+            point = self._qdrant.client.retrieve(
+                collection_name=METADATA_COLLECTION_NAME,
+                ids=[point_id],
+            )
+
+            if not point:
+                logger.debug("No indexed timestamp found for branch", branch=branch)
+                return None
+
+            timestamp = point[0].payload.get("last_indexed_timestamp")
+            logger.debug(
+                "Retrieved last indexed timestamp",
+                branch=branch,
+                timestamp=timestamp,
+            )
+            return timestamp
+
+        except Exception as e:
+            logger.warning(
+                "Failed to retrieve last indexed timestamp",
+                branch=branch,
+                error=str(e),
+            )
+            return None
+
     def set_last_indexed_commit(
         self, branch: str, commit_hash: str, timestamp: datetime
     ) -> None:
@@ -130,13 +167,17 @@ class CommitTracker:
             logger.error("Failed to retrieve tracked branches", error=str(e))
             return []
 
-    def _branch_to_point_id(self, branch: str) -> str:
+    def _branch_to_point_id(self, branch: str) -> int:
         """Convert branch name to Qdrant point ID.
 
         Args:
             branch: Branch name
 
         Returns:
-            Point ID string
+            Point ID integer
         """
-        return f"branch_{branch}"
+        # Convert branch name to deterministic integer ID
+        branch_bytes = branch.encode('utf-8')
+        hash_bytes = hashlib.sha256(branch_bytes).digest()
+        point_id = int.from_bytes(hash_bytes[:8], byteorder='big') % (2**63)
+        return point_id
