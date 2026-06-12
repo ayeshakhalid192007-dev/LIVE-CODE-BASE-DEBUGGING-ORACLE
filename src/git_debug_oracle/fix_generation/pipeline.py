@@ -120,10 +120,8 @@ class FixGenerationPipeline:
 
         # Step 4: Update fix with error context
         fix.affected_file = error.file_path or fix.affected_file
-        fix.affected_line_range = (
-            error.line_number or fix.affected_line_range[0],
-            (error.line_number or fix.affected_line_range[0]) + 5,
-        )
+        if error.line_number:
+            fix.affected_line_range = (error.line_number, error.line_number)
 
         # Step 5: Score confidence
         retrieval_score = (

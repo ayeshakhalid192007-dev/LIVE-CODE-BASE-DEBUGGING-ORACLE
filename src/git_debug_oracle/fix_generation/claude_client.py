@@ -1,6 +1,7 @@
 """Claude API client: call Claude API for fix generation with prompt caching."""
 
 import logging
+import threading
 import time
 from typing import Optional
 
@@ -40,6 +41,7 @@ class ClaudeClient:
         self.max_retries = max_retries
         self.circuit_breaker_failures = 0
         self.circuit_breaker_threshold = 5
+        self._cb_lock = threading.Lock()
 
     def call_with_caching(
         self,
@@ -56,9 +58,10 @@ class ClaudeClient:
             Response text or None on failure
 
         """
-        if self.circuit_breaker_failures >= self.circuit_breaker_threshold:
-            logger.error("Circuit breaker open: too many API failures")
-            return None
+        with self._cb_lock:
+            if self.circuit_breaker_failures >= self.circuit_breaker_threshold:
+                logger.error("Circuit breaker open: too many API failures")
+                return None
 
         for attempt in range(self.max_retries):
             try:
@@ -100,7 +103,12 @@ class ClaudeClient:
                 )
 
                 # Reset circuit breaker on success
-                self.circuit_breaker_failures = 0
+                with self._cb_lock:
+                    self.circuit_breaker_failures = 0
+
+                if not response.content:
+                    logger.error("Claude API returned empty content")
+                    return None
 
                 return response.content[0].text
 
@@ -129,14 +137,16 @@ class ClaudeClient:
                         "error_type": type(e).__name__,
                     },
                 )
-                self.circuit_breaker_failures += 1
+                with self._cb_lock:
+                    self.circuit_breaker_failures += 1
                 return None
 
         logger.error(
             "Claude API call failed after retries",
             extra={"max_retries": self.max_retries},
         )
-        self.circuit_breaker_failures += 1
+        with self._cb_lock:
+            self.circuit_breaker_failures += 1
         return None
 
     def get_system_prompt(self) -> str:
@@ -172,4 +182,5 @@ class ClaudeClient:
             True if circuit is open (too many failures)
 
         """
-        return self.circuit_breaker_failures >= self.circuit_breaker_threshold
+        with self._cb_lock:
+            return self.circuit_breaker_failures >= self.circuit_breaker_threshold
