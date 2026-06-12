@@ -5,12 +5,27 @@ applies recency weighting, and returns ranked results with metadata.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any
 
+from qdrant_client.models import Filter, FieldCondition, MatchValue, HasIdCondition
 from git_debug_oracle.error_ingestion.models import ErrorContext, RetrievalResult
 from git_debug_oracle.utils.qdrant_client import QdrantClientWrapper
-from git_debug_oracle.config import settings
+from git_debug_oracle.config import get_settings
 from git_debug_oracle.retriever.recency_weighting import apply_recency_weight
+
+
+def get_qdrant_client() -> Any:
+    """Get initialized Qdrant client wrapper.
+
+    Returns:
+        QdrantClientWrapper configured with settings.
+
+    Raises:
+        Exception: If Qdrant connection fails.
+    """
+    settings = get_settings()
+    client_wrapper = QdrantClientWrapper(settings)
+    return client_wrapper
 
 
 def search_qdrant(
@@ -39,16 +54,72 @@ def search_qdrant(
         True
     """
     try:
-        # Create Qdrant client wrapper
-        from git_debug_oracle.config import Config
-        config = Config()
-        client_wrapper = QdrantClientWrapper(config)
+        client_wrapper = get_qdrant_client()
         qdrant_client = client_wrapper.client
     except Exception:
         # Qdrant unavailable - graceful degradation
         return []
 
-    # For Phase 3, return mock results (Qdrant integration happens in Phase 2)
-    # In production, would embed query and search vector database
-    # This is a placeholder for the actual vector search
-    return []
+    try:
+        settings = get_settings()
+
+        # Create filter for file_path if provided
+        filters: Optional[Filter] = None
+        if ctx.file_path:
+            filters = Filter(
+                must=[
+                    FieldCondition(
+                        key="file_path",
+                        match=MatchValue(value=ctx.file_path),
+                    )
+                ]
+            )
+
+        # Search Qdrant collection
+        search_results = qdrant_client.search(
+            collection_name=settings.qdrant_collection,
+            query_vector=[0.0] * 384,  # Placeholder vector (would be actual embedding)
+            query_filter=filters,
+            limit=top_k,
+            with_payload=True,
+        )
+
+        # Convert Qdrant results to RetrievalResult objects
+        results: list[RetrievalResult] = []
+        for scored_point in search_results:
+            if scored_point.payload is None:
+                continue
+
+            payload = scored_point.payload
+            original_score = min(1.0, max(0.0, float(scored_point.score)))
+
+            # Apply recency weighting
+            commit_date_str = payload.get("commit_date", "")
+            recency_score = apply_recency_weight(
+                original_score,
+                commit_date_str,
+                settings.recent_commit_window,
+            )
+
+            result = RetrievalResult(
+                file_path=payload.get("file_path", ""),
+                start_line=payload.get("start_line", 0),
+                end_line=payload.get("end_line", 0),
+                code_snippet=payload.get("code_snippet", ""),
+                commit_hash=payload.get("commit_hash", ""),
+                commit_date=payload.get("commit_date", ""),
+                author=payload.get("author", ""),
+                message=payload.get("message", ""),
+                original_score=original_score,
+                recency_score=recency_score,
+                final_score=(original_score + recency_score) / 2.0,
+            )
+            results.append(result)
+
+        # Sort by final_score descending
+        results.sort(key=lambda r: r.final_score, reverse=True)
+        return results[:top_k]
+
+    except Exception:
+        # Any error during search - graceful degradation
+        return []

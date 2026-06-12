@@ -67,26 +67,32 @@ class FixProposal:
 
     root_cause: str
     affected_file: str
-    affected_lines: tuple[int, int]
-    introducing_commit: str
+    affected_line_range: tuple[int, int]
     code_patch: str
-    explanation: str
+    patch_language: str
     confidence: float
-    reasoning_trace: list[str]
+    explanation: str
+    affected_functions: list[str]
+    root_cause_category: str
+    alternative_fixes: list['FixProposal'] = None
+
+    def __post_init__(self) -> None:
+        """Initialize alternative_fixes if None."""
+        if self.alternative_fixes is None:
+            self.alternative_fixes = []
 
 
 @dataclass
 class IndexStatus:
     """Current state of the repository index."""
 
-    repo_path: str
-    branch: str
+    is_indexed: bool
     last_indexed_commit: str
     last_indexed_timestamp: datetime
     total_chunks: int
     total_files: int
-    collection_name: str
-    is_indexing: bool
+    branch: str
+    status: str
 
 
 @dataclass
