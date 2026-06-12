@@ -5,12 +5,13 @@ recent changes while still considering older relevant code.
 """
 
 from datetime import datetime, timezone
+from typing import Union
 
 
 def apply_recency_weight(
     original_score: float,
-    commit_timestamp: datetime,
-    now: datetime,
+    commit_timestamp: Union[str, datetime],
+    now: Union[datetime, None] = None,
     recent_window_days: int = 30,
 ) -> tuple[float, float]:
     """Apply recency weighting to vector similarity score.
@@ -25,8 +26,8 @@ def apply_recency_weight(
 
     Args:
         original_score: Vector similarity score from Qdrant (0-1)
-        commit_timestamp: When commit was created (UTC)
-        now: Current time for calculating age (UTC)
+        commit_timestamp: When commit was created (ISO string or datetime UTC)
+        now: Current time for calculating age (UTC). If None, uses now.
         recent_window_days: Days to consider "recent" (default: 30)
 
     Returns:
@@ -45,12 +46,32 @@ def apply_recency_weight(
         >>> boost
         0.7
     """
+    # Set now if not provided
+    if now is None:
+        now = datetime.now(timezone.utc)
+
     # Handle zero original score
     if original_score == 0.0:
         return 0.0, 1.0
 
+    # Parse commit timestamp if string
+    if isinstance(commit_timestamp, str):
+        try:
+            commit_ts = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            # If parsing fails, assume very old
+            commit_ts = now - __import__("datetime").timedelta(days=365)
+    else:
+        commit_ts = commit_timestamp
+
+    # Ensure both datetimes are timezone-aware
+    if commit_ts.tzinfo is None:
+        commit_ts = commit_ts.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
     # Calculate days since commit
-    age = now - commit_timestamp
+    age = now - commit_ts
     days_old = age.total_seconds() / (24 * 3600)
 
     # Calculate recency boost

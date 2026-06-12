@@ -49,43 +49,55 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 400
 
-    def test_webhook_signature_valid(self) -> None:
+    def test_webhook_signature_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Valid HMAC signature passes validation."""
         payload = {"file_path": "app.py", "line_number": 1}
         json_str = json.dumps(payload)
         json_bytes = json_str.encode()
 
-        # Mock secret
-        with patch("git_debug_oracle.webhook.app.settings.webhook_secret", "test_secret"):
-            signature = "sha256=" + hmac.new(
-                b"test_secret",
-                json_bytes,
-                hashlib.sha256,
-            ).hexdigest()
+        # Set webhook secret for this test only
+        monkeypatch.setenv("WEBHOOK_SECRET", "test_secret")
 
-            with patch("git_debug_oracle.webhook.app.search_qdrant", return_value=[]):
-                with patch("git_debug_oracle.webhook.app.get_commit_diffs", return_value=[]):
-                    response = client.post(
-                        "/webhook/error",
-                        content=json_bytes,
-                        headers={
-                            "Content-Type": "application/json",
-                            "X-Webhook-Signature": signature,
-                        },
-                    )
-                    assert response.status_code == 200
+        # Restart settings to pick up new env var
+        from git_debug_oracle.config import _settings_instance
+        import git_debug_oracle.config
+        git_debug_oracle.config._settings_instance = None
 
-    def test_webhook_signature_invalid(self) -> None:
+        signature = "sha256=" + hmac.new(
+            b"test_secret",
+            json_bytes,
+            hashlib.sha256,
+        ).hexdigest()
+
+        with patch("git_debug_oracle.webhook.app.search_qdrant", return_value=[]):
+            with patch("git_debug_oracle.webhook.app.get_commit_diffs", return_value=[]):
+                response = client.post(
+                    "/webhook/error",
+                    content=json_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Webhook-Signature": signature,
+                    },
+                )
+                assert response.status_code == 200
+
+    def test_webhook_signature_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Invalid HMAC signature returns 401."""
         payload = {"file_path": "app.py", "line_number": 1}
 
-        with patch("git_debug_oracle.webhook.app.settings.webhook_secret", "test_secret"):
-            response = client.post(
-                "/webhook/error",
-                json=payload,
-                headers={"X-Webhook-Signature": "sha256=invalid"},
-            )
-            assert response.status_code == 401
+        # Set webhook secret for this test only
+        monkeypatch.setenv("WEBHOOK_SECRET", "test_secret")
+
+        # Restart settings to pick up new env var
+        import git_debug_oracle.config
+        git_debug_oracle.config._settings_instance = None
+
+        response = client.post(
+            "/webhook/error",
+            json=payload,
+            headers={"X-Webhook-Signature": "sha256=invalid"},
+        )
+        assert response.status_code == 401
 
     def test_webhook_response_structure(self) -> None:
         """Response has correct JSON structure."""

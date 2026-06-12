@@ -158,3 +158,26 @@ class Config(BaseSettings):
                 f"CHUNK_OVERLAP ({v}) must be less than CHUNK_SIZE ({chunk_size})"
             )
         return v
+
+
+_settings_instance: Optional[Config] = None
+
+
+def get_settings() -> Config:
+    """Get or create settings instance (lazy loading to avoid validation on import)."""
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Config()
+    return _settings_instance
+
+
+# For backwards compatibility, provide settings as a module-level object
+# that behaves like Config but uses lazy loading
+class SettingsProxy:
+    """Proxy to settings instance that lazy-loads on first access."""
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_settings(), name)
+
+
+settings = SettingsProxy()  # type: ignore

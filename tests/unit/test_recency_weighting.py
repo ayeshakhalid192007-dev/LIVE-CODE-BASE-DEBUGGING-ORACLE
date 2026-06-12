@@ -13,7 +13,7 @@ class TestRecencyWeighting:
         """Today's commit gets ~1.0x boost."""
         now = datetime.now(timezone.utc)
         score, boost = apply_recency_weight(0.8, now, now, recent_window_days=30)
-        assert 0.99 <= score <= 1.01
+        assert 0.79 <= score <= 0.81  # 0.8 * 1.0 boost
         assert 0.99 <= boost <= 1.01
 
     def test_weight_30_days_old(self) -> None:
@@ -21,7 +21,7 @@ class TestRecencyWeighting:
         now = datetime.now(timezone.utc)
         old = now - timedelta(days=30)
         score, boost = apply_recency_weight(0.8, old, now, recent_window_days=30)
-        assert 0.69 <= score <= 0.71
+        assert 0.55 <= score <= 0.57  # 0.8 * 0.7 boost
         assert 0.69 <= boost <= 0.71
 
     def test_weight_15_days_old(self) -> None:
@@ -29,15 +29,15 @@ class TestRecencyWeighting:
         now = datetime.now(timezone.utc)
         old = now - timedelta(days=15)
         score, boost = apply_recency_weight(0.8, old, now, recent_window_days=30)
-        # Boost: 1.0 - (15/30) * 0.3 = 0.85
-        assert 0.84 <= score <= 0.86
+        # Boost: 1.0 - (15/30) * 0.3 = 0.85, score = 0.8 * 0.85 = 0.68
+        assert 0.67 <= score <= 0.69
 
     def test_weight_older_than_window(self) -> None:
         """Beyond recent window gets 0.7x penalty."""
         now = datetime.now(timezone.utc)
         old = now - timedelta(days=100)
         score, boost = apply_recency_weight(0.8, old, now, recent_window_days=30)
-        assert 0.69 <= score <= 0.71
+        assert 0.55 <= score <= 0.57  # 0.8 * 0.7 boost
 
     def test_weight_zero_original_score(self) -> None:
         """Zero original score stays zero."""
