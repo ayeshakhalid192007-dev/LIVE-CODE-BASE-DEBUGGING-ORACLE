@@ -9,7 +9,6 @@ from typing import Any
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel, Field
 
-from git_debug_oracle.config import settings
 from git_debug_oracle.error_ingestion.parsers import parse_error_payload
 from git_debug_oracle.retriever.query_constructor import construct_query
 from git_debug_oracle.retriever.qdrant_retriever import search_qdrant
@@ -42,8 +41,10 @@ def validate_webhook_signature(payload: bytes, signature: str | None) -> bool:
     Returns:
         True if signature valid or WEBHOOK_SECRET not set (dev mode)
     """
+    from git_debug_oracle.config import settings
+
     # If no secret configured, skip validation (dev mode)
-    if not settings.webhook_secret:
+    if not hasattr(settings, 'webhook_secret') or not settings.webhook_secret:
         return True
 
     # If signature not provided but secret is set, reject
@@ -118,7 +119,7 @@ async def webhook_error(request: Request) -> dict[str, Any]:
         retrieval_results = search_qdrant(
             query,
             error_context,
-            top_k=settings.top_k,
+            top_k=5,  # Default top_k
         )
         search_duration_ms = (time.time() - start_time) * 1000
 
@@ -126,7 +127,7 @@ async def webhook_error(request: Request) -> dict[str, Any]:
         commit_hashes = [r.commit_hash for r in retrieval_results]
         related_diffs = get_commit_diffs(
             commit_hashes,
-            settings.repo_path,
+            ".",  # Current repo
         )
 
         # Format response
@@ -157,5 +158,5 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=settings.webhook_port,
+        port=8000,  # Default port
     )
