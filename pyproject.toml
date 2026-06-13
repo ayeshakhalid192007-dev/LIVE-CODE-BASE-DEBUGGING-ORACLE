@@ -70,7 +70,10 @@ select = [
     "SIM", # flake8-simplify
 ]
 ignore = [
-    "E501", # line too long (handled by formatter)
+    "E501",   # line too long (handled by formatter)
+    "UP006",  # allow Union[X, None] instead of Optional[X]
+    "UP007",  # allow Optional[X] instead of X | None
+    "UP017",  # allow timezone.utc instead of datetime.UTC (py312+)
 ]
 
 [tool.ruff.lint.per-file-ignores]
