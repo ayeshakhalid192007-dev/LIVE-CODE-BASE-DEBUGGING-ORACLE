@@ -4,24 +4,14 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class DebugErrorInput(BaseModel):
     """Input schema for debug_error MCP tool."""
 
-    file_path: str = Field(..., description="Path to file where error occurred")
-    line_number: int = Field(..., description="Line number where error occurred", gt=0)
-    function_name: Optional[str] = Field(None, description="Function name if available")
-    error_type: Optional[str] = Field(None, description="Error type (e.g., ValueError)")
-    error_message: Optional[str] = Field(None, description="Error message text")
-    stacktrace: Optional[str] = Field(None, description="Full stacktrace")
-    language: Optional[str] = Field(None, description="Programming language")
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "file_path": "src/app.py",
                 "line_number": 42,
@@ -30,6 +20,15 @@ class DebugErrorInput(BaseModel):
                 "language": "python",
             }
         }
+    )
+
+    file_path: str = Field(..., description="Path to file where error occurred")
+    line_number: int = Field(..., description="Line number where error occurred", gt=0)
+    function_name: Optional[str] = Field(None, description="Function name if available")
+    error_type: Optional[str] = Field(None, description="Error type (e.g., ValueError)")
+    error_message: Optional[str] = Field(None, description="Error message text")
+    stacktrace: Optional[str] = Field(None, description="Full stacktrace")
+    language: Optional[str] = Field(None, description="Programming language")
 
 
 class ErrorContextOutput(BaseModel):
@@ -74,22 +73,8 @@ class FixProposalOutput(BaseModel):
 class DebugErrorOutput(BaseModel):
     """Output schema for debug_error MCP tool."""
 
-    error_context: ErrorContextOutput
-    retrieval_results: list[RetrievalResultOutput]
-    fix_proposal: Optional[FixProposalOutput] = None
-    status: str = Field(..., description="success, partial, or failed")
-
-    @validator("status")
-    def status_valid(cls, v: str) -> str:
-        """Validate status value."""
-        if v not in ("success", "partial", "failed"):
-            raise ValueError("status must be 'success', 'partial', or 'failed'")
-        return v
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error_context": {
                     "file_path": "src/app.py",
@@ -110,41 +95,35 @@ class DebugErrorOutput(BaseModel):
                 "status": "success",
             }
         }
+    )
+
+    error_context: ErrorContextOutput
+    retrieval_results: list[RetrievalResultOutput]
+    fix_proposal: Optional[FixProposalOutput] = None
+    status: str = Field(..., description="success, partial, or failed")
+
+    @field_validator("status")
+    @classmethod
+    def status_valid(cls, v: str) -> str:
+        """Validate status value."""
+        if v not in ("success", "partial", "failed"):
+            raise ValueError("status must be 'success', 'partial', or 'failed'")
+        return v
 
 
 class GetIndexStatusInput(BaseModel):
     """Input schema for get_index_status MCP tool."""
 
+    model_config = ConfigDict(json_schema_extra={"example": {"branch": "main"}})
+
     branch: Optional[str] = Field(None, description="Branch to check (defaults to current)")
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {"example": {"branch": "main"}}
 
 
 class IndexStatusOutput(BaseModel):
     """Output schema for get_index_status MCP tool."""
 
-    is_indexed: bool = Field(..., description="Whether repo is indexed")
-    last_indexed_commit: str = Field(..., description="Commit hash of last index")
-    last_indexed_timestamp: str = Field(..., description="ISO8601 timestamp of last index")
-    total_chunks: int = Field(..., description="Total chunks in index")
-    total_files: int = Field(..., description="Total files indexed")
-    branch: str = Field(..., description="Branch name")
-    status: str = Field(..., description="indexed, not_indexed, indexing, or failed")
-
-    @validator("status")
-    def status_valid(cls, v: str) -> str:
-        """Validate status value."""
-        if v not in ("indexed", "not_indexed", "indexing", "failed"):
-            raise ValueError("status must be indexed, not_indexed, indexing, or failed")
-        return v
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "is_indexed": True,
                 "last_indexed_commit": "abc123def456",
@@ -155,24 +134,40 @@ class IndexStatusOutput(BaseModel):
                 "status": "indexed",
             }
         }
+    )
+
+    is_indexed: bool = Field(..., description="Whether repo is indexed")
+    last_indexed_commit: str = Field(..., description="Commit hash of last index")
+    last_indexed_timestamp: str = Field(..., description="ISO8601 timestamp of last index")
+    total_chunks: int = Field(..., description="Total chunks in index")
+    total_files: int = Field(..., description="Total files indexed")
+    branch: str = Field(..., description="Branch name")
+    status: str = Field(..., description="indexed, not_indexed, indexing, or failed")
+
+    @field_validator("status")
+    @classmethod
+    def status_valid(cls, v: str) -> str:
+        """Validate status value."""
+        if v not in ("indexed", "not_indexed", "indexing", "failed"):
+            raise ValueError("status must be indexed, not_indexed, indexing, or failed")
+        return v
 
 
 class SearchCodebaseInput(BaseModel):
     """Input schema for search_codebase MCP tool (v1.0 stable)."""
 
-    query: str = Field(..., description="Search query text")
-    top_k: Optional[int] = Field(5, description="Number of results", ge=1, le=20)
-    file_filter: Optional[str] = Field(None, description="Optional file path filter")
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "authentication error handling",
                 "top_k": 5,
             }
         }
+    )
+
+    query: str = Field(..., description="Search query text")
+    top_k: Optional[int] = Field(5, description="Number of results", ge=1, le=20)
+    file_filter: Optional[str] = Field(None, description="Optional file path filter")
 
 
 class SearchCodebaseOutput(BaseModel):
@@ -183,7 +178,8 @@ class SearchCodebaseOutput(BaseModel):
     total_searched: int
     status: str
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def status_valid(cls, v: str) -> str:
         """Validate status."""
         if v not in ("success", "partial", "failed"):
@@ -205,13 +201,10 @@ class CommitDiffOutput(BaseModel):
 class GetRecentDiffsInput(BaseModel):
     """Input schema for get_recent_diffs MCP tool (v1.0 stable)."""
 
+    model_config = ConfigDict(json_schema_extra={"example": {"num_commits": 5, "branch": "main"}})
+
     num_commits: Optional[int] = Field(5, description="Number of commits", ge=1, le=20)
     branch: Optional[str] = Field(None, description="Branch name")
-
-    class Config:
-        """Pydantic config."""
-
-        schema_extra = {"example": {"num_commits": 5, "branch": "main"}}
 
 
 class GetRecentDiffsOutput(BaseModel):
@@ -221,7 +214,8 @@ class GetRecentDiffsOutput(BaseModel):
     branch: str
     status: str
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def status_valid(cls, v: str) -> str:
         """Validate status."""
         if v not in ("success", "partial", "failed"):
