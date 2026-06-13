@@ -99,9 +99,14 @@ class TestWebhookEndpoint:
         )
         assert response.status_code == 401
 
-    def test_webhook_response_structure(self) -> None:
+    def test_webhook_response_structure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Response has correct JSON structure."""
         payload = {"file_path": "app.py", "line_number": 1}
+
+        # Clear webhook secret to skip signature validation
+        monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
+        import git_debug_oracle.config
+        git_debug_oracle.config._settings_instance = None
 
         with patch("git_debug_oracle.webhook.app.search_qdrant", return_value=[]):
             with patch("git_debug_oracle.webhook.app.get_commit_diffs", return_value=[]):
