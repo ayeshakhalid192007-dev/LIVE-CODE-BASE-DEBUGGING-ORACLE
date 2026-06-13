@@ -419,59 +419,6 @@ On a medium repository (50k lines), full indexing takes ~30 seconds. Incremental
 
 ---
 
-## 💡 Real-World Use Cases
-
-**Solo Developer**
-```
-Situation: You push code, production logs show an error 5 minutes later
-Before Oracle: Spend 20 min digging through git, reading diffs, guessing
-With Oracle: Paste error in Claude, get fix in 30 seconds
-```
-
-**Backend Team**
-```
-Situation: Someone breaks the auth system with a recent PR
-Before Oracle: Lead spends 30 min code review to find the issue
-With Oracle: Error is posted, Claude finds exact line, fix is proposed
-```
-
-**OSS Maintainer**
-```
-Situation: A contributor's PR caused a regression in production
-Before Oracle: Manual investigation of PR diffs and git history
-With Oracle: Post error, immediately see which PR line broke it
-```
-
-**Debugging During Development**
-```
-Situation: You're writing code and want to understand recent changes
-Tool: Call search_codebase("database migration handling") and get_recent_diffs(days=7)
-Result: See all recent database changes and understand context
-```
-
----
-
-## 🔗 System Architecture
-
-For deep technical details, see:
-- `specs/architecture.md` — Full system design with data flow diagrams
-- `specs/tech-stack.md` — Technology choices and rationale
-- `specs/mission.md` — Project goals and design principles
-- `docs/ERROR_PAYLOADS.md` — Error format specifications
-
----
-
-## 📚 Documentation
-
-- **`docs/QUICKSTART.md`** — Step-by-step setup guide
-- **`docs/MCP_TOOLS.md`** — Complete MCP tool API reference
-- **`docs/MCP_CONFIG.md`** — Claude Code and Claude Desktop configuration
-- **`docs/CONFIGURATION.md`** — All environment variables explained
-- **`docs/ERROR_PAYLOADS.md`** — Error format examples from different systems
-- **`docs/TROUBLESHOOTING.md`** — Common issues and solutions
-- **`CONTRIBUTING.md`** — How to contribute code
-- **`specs/`** — Detailed specifications and roadmap
-
 ## 📄 License
 
 MIT License — See LICENSE file for details.
@@ -485,27 +432,6 @@ We welcome contributions! See `CONTRIBUTING.md` for:
 - Git workflow (branch naming, commit messages)
 - Testing requirements (all new code must be tested)
 - Code standards (type annotations, docstrings, single responsibility)
-
----
-
-## 🚀 Development Status
-
-**Current Phase**: Phase 5 — OSS Hardening ✅
-- Docker containerization complete
-- CI/CD pipeline (GitHub Actions) complete
-- Pydantic V2 migration complete
-- Production-ready CHANGELOG
-
-**Completed Phases:**
-- Phase 1: Foundation (core architecture, MCP setup)
-- Phase 2: Indexing Pipeline (Git reading, code chunking, embedding)
-- Phase 3: Retrieval & Error Ingestion (vector search, webhook)
-- Phase 4: Fix Generation (Claude integration, MCP tools)
-- Phase 5: OSS Hardening (Docker, CI/CD, docs, type safety)
-
-**Next Phase**: Phase 6 — Advanced Monitoring & Integrations
-
-See `specs/roadmap.md` for detailed milestones.
 
 ---
 
