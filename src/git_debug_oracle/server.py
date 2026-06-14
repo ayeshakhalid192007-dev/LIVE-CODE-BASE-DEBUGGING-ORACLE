@@ -36,8 +36,7 @@ def create_server() -> Server:
     # Configure logging
     # Use development mode by default, production if ENVIRONMENT=production
     is_development = os.getenv("ENVIRONMENT", "development") != "production"
-    # LogLevel enum inherits from str, so can be used directly
-    configure_logging(log_level=str(_config.log_level), development=is_development)
+    configure_logging(log_level=_config.log_level.value, development=is_development)
 
     _logger = get_logger(__name__)
     _logger.info(
@@ -113,10 +112,22 @@ async def list_tools() -> list[dict[str, Any]]:
                 "type": "object",
                 "properties": {
                     "repo_path": {"type": "string", "description": "Absolute path to repository"},
-                    "commit_hash": {"type": "string", "description": "Commit hash to index (default: HEAD)"},
-                    "branch": {"type": "string", "description": "Branch name for tracking (default: main)"},
-                    "force_full": {"type": "boolean", "description": "Force full re-index (default: false)"},
-                    "commit_range": {"type": "array", "description": "Tuple of [start_commit, end_commit] to index range"},
+                    "commit_hash": {
+                        "type": "string",
+                        "description": "Commit hash to index (default: HEAD)",
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "Branch name for tracking (default: main)",
+                    },
+                    "force_full": {
+                        "type": "boolean",
+                        "description": "Force full re-index (default: false)",
+                    },
+                    "commit_range": {
+                        "type": "array",
+                        "description": "Tuple of [start_commit, end_commit] to index range",
+                    },
                 },
                 "required": [],
             },
@@ -177,7 +188,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[dict[str, Any]
             commit_hash=arguments.get("commit_hash"),
             branch=arguments.get("branch"),
             force_full=arguments.get("force_full", False),
-            commit_range=tuple(arguments.get("commit_range")) if arguments.get("commit_range") else None,
+            commit_range=tuple(arguments.get("commit_range"))
+            if arguments.get("commit_range")
+            else None,
             config=_config,
             qdrant_wrapper=_qdrant_client,
             embedder=VoyageEmbedder(_config.embedding_api_key),
