@@ -3,7 +3,9 @@
 import os
 from typing import Any
 
+import anyio
 from mcp.server import Server
+from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from git_debug_oracle.config import Config
@@ -225,11 +227,24 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[dict[str, Any]
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    anyio.run(_async_main)
+
+
+async def _async_main() -> None:
+    """Async entry point that runs the MCP server with stdio transport."""
     # Initialize server components
     create_server()
 
     # Run the MCP server using stdio transport
-    stdio_server(server).run()
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="git-debug-oracle",
+                server_version="0.1.0",
+            ),
+        )
 
 
 if __name__ == "__main__":
