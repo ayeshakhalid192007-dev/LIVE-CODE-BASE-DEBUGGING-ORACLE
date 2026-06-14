@@ -1,8 +1,8 @@
-# 🔍 Git Debug Oracle
+# 🔍 Git Debug Oracle — Python Projects
 
-**Instant error diagnosis for your codebase.** When something breaks, get from stacktrace to fix in seconds—not minutes.
+**Instant error diagnosis for Python codebases.** When something breaks, get from stacktrace to fix in seconds—not minutes.
 
-This MCP server reads your Git history, finds the exact code that caused an error, and uses Claude to propose a fix with full reasoning. No manual detective work. No grep archaeology. Just answers.
+This MCP server reads your Git history, finds the exact code that caused an error, and uses Claude to propose a fix with full reasoning. Optimized for Python projects. No manual detective work. No grep archaeology. Just answers.
 
 ---
 
@@ -36,7 +36,7 @@ This MCP server reads your Git history, finds the exact code that caused an erro
 | **Recency weighting** | Recent code breaks recent—ranks new commits higher |
 | **Claude integration** | Works as Claude Code MCP tools for seamless debugging |
 | **Fully local** | Your code stays on your machine (only API calls to embedding + Claude go out) |
-| **Multi-language** | Parses Python, JavaScript, Java, Go stacktraces |
+| **Python-focused** | Optimized for Python projects and stacktraces. Stores and indexes Python code efficiently. |
 
 ---
 
@@ -82,7 +82,7 @@ curl http://localhost:8000/health
 
 You need Qdrant running before starting the server. Choose one:
 
-#### **Option A: Local Docker (Easiest)**
+#### **Option A: Docker (Easiest)**
 ```bash
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
 ```
@@ -96,10 +96,10 @@ docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
    QDRANT_API_KEY=your-api-key
    ```
 
-#### **Option C: Local Installation**
+#### **Option C: Local Python Instance**
 ```bash
-pip install qdrant-client
-# Then configure for local mode in your code
+uv pip install qdrant-client
+# Configure for local mode in your environment
 ```
 
 ## 📋 Prerequisites
@@ -449,7 +449,7 @@ A: No. Your repository, code chunks, and diffs stay on your machine. Only API ca
 A: Any size. Incremental indexing means only changed files are processed. Even a 500k-line monorepo indexes new commits in seconds.
 
 **Q: What languages does it support?**
-A: Parses stacktraces from Python, JavaScript, Java, Go. Code itself can be any language—it indexes any text-based code files.
+A: Designed for Python projects. Optimized for Python stacktraces, code indexing, and error patterns. Code itself can be any language—it indexes any text-based code files—but the tool chain and error diagnosis is Python-first.
 
 **Q: Can I use it offline?**
 A: Partially. Indexing and searching work fully offline. Fix generation requires Claude API, embedding requires an embedding API. Qdrant can run locally with no external deps.
