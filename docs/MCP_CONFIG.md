@@ -298,6 +298,6 @@ Enable debug logging:
 
 Check logs:
 
-```bash
-docker-compose logs -f mcp-server --tail 100
-```
+Logs will appear in the terminal where you ran: `uv run python -m git_debug_oracle.server`
+
+Look for lines with ERROR or WARNING to diagnose issues.
