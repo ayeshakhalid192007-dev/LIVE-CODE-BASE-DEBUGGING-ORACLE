@@ -1,5 +1,10 @@
 # 🔍 Git Debug Oracle
 
+[![PyPI version](https://img.shields.io/pypi/v/git-debug-oracle.svg)](https://pypi.org/project/git-debug-oracle/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/github-ayeshakhalid192007--dev-blue.svg)](https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE)
+
 **Instant error diagnosis for Python codebases.** Paste a stacktrace into Claude. Get a fix with reasoning in seconds.
 
 This MCP server indexes your Git history, finds the exact code that caused an error, and uses Claude to propose fixes with full root cause analysis. Optimized for Python. No manual detective work.
@@ -13,10 +18,14 @@ This MCP server indexes your Git history, finds the exact code that caused an er
 git clone https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE.git
 cd LIVE-CODE-BASE-DEBUGGING-ORACLE
 
-# 2. Install uv (if needed)
+# 2. Install from PyPI
+pip install git-debug-oracle
+
+# Or install from source with uv
+# 2a. Install uv (if needed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 3. Install dependencies
+# 2b. Install dependencies
 uv sync
 
 # 4. Set up environment
