@@ -364,9 +364,9 @@ pre-commit install
 
 **"Cannot connect to Qdrant"**
 ```
-1. Check Qdrant is running: docker-compose ps
+1. Verify Qdrant is running: curl http://localhost:6333/health
 2. Verify QDRANT_HOST and QDRANT_PORT in .env
-3. Restart: docker-compose restart
+3. If not running, start it (see Quick Start: Qdrant Setup)
 ```
 
 **"ANTHROPIC_API_KEY not set"**

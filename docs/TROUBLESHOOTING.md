@@ -364,11 +364,16 @@ curl -X DELETE http://localhost:6333/collections/git_debug_oracle
 # Check disk usage
 df -h
 
-# Clean Qdrant snapshots (if using Docker)
-docker exec <qdrant_container> rm -rf /qdrant/snapshots/*
+# If using local Qdrant via Docker, you can clean up:
+# Find the qdrant container
+docker ps | grep qdrant
 
-# Or reduce collection size:
-CHUNK_SIZE=500  # Smaller chunks = fewer total chunks
+# Remove old snapshots (if volume mounted)
+# Or clear the collection and re-index:
+curl -X DELETE http://localhost:6333/collections/git_debug_oracle
+
+# Then re-index
+Tool: index_repo
 ```
 
 ## Getting Help
