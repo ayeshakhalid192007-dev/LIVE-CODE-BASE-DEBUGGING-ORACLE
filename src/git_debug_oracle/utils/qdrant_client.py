@@ -24,10 +24,14 @@ class QdrantClientWrapper:
             config: Application configuration containing Qdrant settings
         """
         self._config = config
+
+        use_ssl = config.qdrant_host not in ("localhost", "127.0.0.1", "::1")
+
         self._client = QdrantClient(
             host=config.qdrant_host,
             port=config.qdrant_port,
             api_key=config.qdrant_api_key,
+            https=use_ssl,
         )
 
         logger.info(
@@ -35,6 +39,7 @@ class QdrantClientWrapper:
             host=config.qdrant_host,
             port=config.qdrant_port,
             collection=config.qdrant_collection,
+            use_ssl=use_ssl,
         )
 
     @property
