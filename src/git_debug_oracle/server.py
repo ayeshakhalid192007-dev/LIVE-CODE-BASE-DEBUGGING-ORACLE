@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 import anyio
-from mcp.server import Server
+from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
@@ -243,6 +243,10 @@ async def _async_main() -> None:
             InitializationOptions(
                 server_name="git-debug-oracle",
                 server_version="0.1.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
             ),
         )
 
