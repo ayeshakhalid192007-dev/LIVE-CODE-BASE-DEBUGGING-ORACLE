@@ -40,31 +40,13 @@ Add this to `settings.json`:
 }
 ```
 
-### Step 3: Or use Docker Compose
-
-If running via Docker Compose:
-
-```json
-{
-  "mcpServers": {
-    "git-debug-oracle": {
-      "command": "docker-compose",
-      "args": ["exec", "-T", "mcp-server", "python", "-m", "git_debug_oracle.server"],
-      "env": {
-        "COMPOSE_PROJECT_NAME": "git-debug-oracle"
-      }
-    }
-  }
-}
-```
-
-### Step 4: Restart Claude Code
+### Step 3: Restart Claude Code
 
 - Close Claude Code completely
 - Reopen Claude Code
 - Tools should appear in MCP tool list
 
-### Step 5: Verify
+### Step 4: Verify
 
 Call the health check:
 
