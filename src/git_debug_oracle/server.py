@@ -7,6 +7,7 @@ import anyio
 from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
+from mcp.types import Tool
 
 from git_debug_oracle.config import Config
 from git_debug_oracle.utils.logging import configure_logging, get_logger
@@ -91,26 +92,26 @@ def health_check() -> dict[str, Any]:
 
 
 @server.list_tools()
-async def list_tools() -> list[dict[str, Any]]:
+async def list_tools() -> list[Tool]:
     """List available MCP tools.
 
     Returns:
-        List of tool definitions
+        List of Tool definitions
     """
     return [
-        {
-            "name": "health_check",
-            "description": "Check health status of the server and its dependencies",
-            "inputSchema": {
+        Tool(
+            name="health_check",
+            description="Check health status of the server and its dependencies",
+            inputSchema={
                 "type": "object",
                 "properties": {},
                 "required": [],
             },
-        },
-        {
-            "name": "index_repo",
-            "description": "Index a Git repository or specific commit with full or incremental indexing",
-            "inputSchema": {
+        ),
+        Tool(
+            name="index_repo",
+            description="Index a Git repository or specific commit with full or incremental indexing",
+            inputSchema={
                 "type": "object",
                 "properties": {
                     "repo_path": {"type": "string", "description": "Absolute path to repository"},
@@ -133,11 +134,11 @@ async def list_tools() -> list[dict[str, Any]]:
                 },
                 "required": [],
             },
-        },
-        {
-            "name": "index_incremental",
-            "description": "Incrementally index repository (only new commits since last index)",
-            "inputSchema": {
+        ),
+        Tool(
+            name="index_incremental",
+            description="Incrementally index repository (only new commits since last index)",
+            inputSchema={
                 "type": "object",
                 "properties": {
                     "repo_path": {"type": "string", "description": "Absolute path to repository"},
@@ -145,11 +146,11 @@ async def list_tools() -> list[dict[str, Any]]:
                 },
                 "required": [],
             },
-        },
-        {
-            "name": "get_index_status",
-            "description": "Get the current index status for a repository and branch",
-            "inputSchema": {
+        ),
+        Tool(
+            name="get_index_status",
+            description="Get the current index status for a repository and branch",
+            inputSchema={
                 "type": "object",
                 "properties": {
                     "repo_path": {"type": "string", "description": "Absolute path to repository"},
@@ -157,16 +158,16 @@ async def list_tools() -> list[dict[str, Any]]:
                 },
                 "required": [],
             },
-        },
-        {
-            "name": "get_all_indexed_branches",
-            "description": "Get list of all branches that have been indexed",
-            "inputSchema": {
+        ),
+        Tool(
+            name="get_all_indexed_branches",
+            description="Get list of all branches that have been indexed",
+            inputSchema={
                 "type": "object",
                 "properties": {},
                 "required": [],
             },
-        },
+        ),
     ]
 
 
