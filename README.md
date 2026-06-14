@@ -40,66 +40,60 @@ This MCP server reads your Git history, finds the exact code that caused an erro
 
 ---
 
-## ⚡ Quick Start (< 5 minutes)
+## ⚡ Quick Start
 
 ### Prerequisites
-
 - Python 3.11+
-- [uv package manager](https://docs.astral.sh/uv/getting-started/)
-- Qdrant vector database (see Qdrant Setup below)
-- API keys:
-  - Claude: https://console.anthropic.com/account/keys
-  - Embeddings: https://www.voyageai.com or https://platform.openai.com/api-keys
+- Docker (for Qdrant)
+- API Keys: Anthropic + Voyage AI or OpenAI
 
-### Setup
-
+### 1. Clone the repo
 ```bash
-# 1. Clone the repo
 git clone https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE.git
 cd LIVE-CODE-BASE-DEBUGGING-ORACLE
+```
 
-# 2. Install dependencies
-uv pip install -e ".[dev]"
+### 2. Install uv (if not installed)
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-# 3. Create and configure .env
+### 3. Install dependencies
+```bash
+uv sync
+```
+
+### 4. Set up environment
+```bash
 cp .env.example .env
-# Edit .env with:
-#   - ANTHROPIC_API_KEY=sk-ant-...
-#   - EMBEDDING_API_KEY=your-key-here
-#   - REPO_PATH=/absolute/path/to/your/repository
-#   - QDRANT_HOST=localhost (if Qdrant running locally)
-#   - QDRANT_PORT=6333
-
-# 4. Start MCP server
-uv run python -m git_debug_oracle.server
-
-# 5. Verify it works (in another terminal)
-curl http://localhost:8000/health
-# Should return: {"status": "healthy"}
+# Edit .env and add your API keys and repo path
 ```
 
-### Qdrant Setup
-
-You need Qdrant running before starting the server. Choose one:
-
-#### **Option A: Docker (Easiest)**
+### 5. Start Qdrant
 ```bash
-docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
+docker-compose up qdrant -d
 ```
 
-#### **Option B: Qdrant Cloud**
-1. Sign up at https://qdrant.tech/cloud/
-2. Create a cluster and get your API key
-3. Set in .env:
-   ```
-   QDRANT_HOST=your-cluster.qdrant.io
-   QDRANT_API_KEY=your-api-key
-   ```
-
-#### **Option C: Local Python Instance**
+### 6. Verify Qdrant is running
 ```bash
-uv pip install qdrant-client
-# Configure for local mode in your environment
+curl http://localhost:6333
+# Should return: {"title":"qdrant - vector search engine",...}
+```
+
+### 7. Start the MCP server
+```bash
+uv run git-debug-oracle
+```
+
+### 8. Connect to Claude Code (globally)
+```bash
+claude mcp add --scope user live-code-oracle -- /path/to/uv --directory /path/to/LIVE-CODE-BASE-DEBUGGING-ORACLE run git-debug-oracle
+```
+
+### 9. Verify connection
+```bash
+claude mcp list
+# Should show: live-code-oracle - ✔ Connected
 ```
 
 ## 📋 Prerequisites
@@ -117,31 +111,17 @@ uv pip install qdrant-client
 
 ## 🚀 How to Use This with Claude Code
 
-Once Oracle is running, you add it to Claude Code as an MCP server. Then Claude can call Oracle tools directly—no manual steps.
+Once Oracle is running, Claude Code can call Oracle tools directly.
 
 ### Step 1: Register the MCP Server
 
-**For Claude Code**, add to your config file (usually `~/.claude/settings.json`):
+The MCP server is already registered in the Quick Start (step 8). If you need to re-register it:
 
-```json
-{
-  "mcpServers": {
-    "git-debug-oracle": {
-      "command": "python",
-      "args": ["-m", "git_debug_oracle.server"],
-      "env": {
-        "QDRANT_HOST": "localhost",
-        "QDRANT_PORT": "6333",
-        "ANTHROPIC_API_KEY": "sk-ant-...",
-        "EMBEDDING_API_KEY": "your-embedding-key",
-        "REPO_PATH": "/absolute/path/to/your/repo"
-      }
-    }
-  }
-}
+```bash
+claude mcp add --scope user live-code-oracle -- /path/to/uv --directory /path/to/LIVE-CODE-BASE-DEBUGGING-ORACLE run git-debug-oracle
 ```
 
-After saving, restart Claude Code. The Oracle tools should appear in the MCP tool list.
+The Oracle tools should now appear in Claude Code's MCP tool list.
 
 ### Step 2: Index Your Repository
 
