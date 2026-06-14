@@ -25,7 +25,7 @@ class QdrantClientWrapper:
         """
         self._config = config
 
-        use_ssl = config.qdrant_host not in ("localhost", "127.0.0.1")
+        use_ssl = config.qdrant_host not in ("localhost", "127.0.0.1", "::1")
 
         self._client = QdrantClient(
             host=config.qdrant_host,
