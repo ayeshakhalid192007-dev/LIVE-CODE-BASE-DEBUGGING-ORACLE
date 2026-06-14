@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 from mcp.server import Server
-import mcp.server.stdio
+from mcp.server.stdio import stdio_server
 
 from git_debug_oracle.config import Config
 from git_debug_oracle.utils.logging import configure_logging, get_logger
@@ -229,7 +229,7 @@ def main() -> None:
     create_server()
 
     # Run the MCP server using stdio transport
-    mcp.server.stdio.run(server)
+    stdio_server(server).run()
 
 
 if __name__ == "__main__":
