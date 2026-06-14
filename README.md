@@ -42,64 +42,72 @@ This MCP server reads your Git history, finds the exact code that caused an erro
 
 ## ⚡ Quick Start (< 5 minutes)
 
-### Setup (Choose One)
+### Prerequisites
 
-#### **Option A: Docker (Easiest)**
+- Python 3.11+
+- [uv package manager](https://docs.astral.sh/uv/getting-started/)
+- Qdrant vector database (see Qdrant Setup below)
+- API keys:
+  - Claude: https://console.anthropic.com/account/keys
+  - Embeddings: https://www.voyageai.com or https://platform.openai.com/api-keys
+
+### Setup
 
 ```bash
 # 1. Clone the repo
 git clone https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE.git
 cd LIVE-CODE-BASE-DEBUGGING-ORACLE
 
-# 2. Get your API keys
-#    - Claude: https://console.anthropic.com/account/keys
-#    - Embeddings: https://www.voyageai.com or https://platform.openai.com/api-keys
+# 2. Install dependencies
+uv pip install -e ".[dev]"
 
-# 3. Create .env file
-cp .env.compose .env
+# 3. Create and configure .env
+cp .env.example .env
+# Edit .env with:
+#   - ANTHROPIC_API_KEY=sk-ant-...
+#   - EMBEDDING_API_KEY=your-key-here
+#   - REPO_PATH=/absolute/path/to/your/repository
+#   - QDRANT_HOST=localhost (if Qdrant running locally)
+#   - QDRANT_PORT=6333
 
-# 4. Edit .env and add your keys
-ANTHROPIC_API_KEY=sk-ant-...
-EMBEDDING_API_KEY=your-key-here
-REPO_PATH=/absolute/path/to/your/repository
+# 4. Start MCP server
+uv run python -m git_debug_oracle.server
 
-# 5. Start everything
-docker-compose up -d
-
-# 6. Verify it works
+# 5. Verify it works (in another terminal)
 curl http://localhost:8000/health
 # Should return: {"status": "healthy"}
 ```
 
-#### **Option B: Local Python**
+### Qdrant Setup
 
+You need Qdrant running before starting the server. Choose one:
+
+#### **Option A: Local Docker (Easiest)**
 ```bash
-# 1. Clone and install
-git clone https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE.git
-cd LIVE-CODE-BASE-DEBUGGING-ORACLE
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
+```
 
-# 2. Install uv package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh
+#### **Option B: Qdrant Cloud**
+1. Sign up at https://qdrant.tech/cloud/
+2. Create a cluster and get your API key
+3. Set in .env:
+   ```
+   QDRANT_HOST=your-cluster.qdrant.io
+   QDRANT_API_KEY=your-api-key
+   ```
 
-# 3. Install dependencies
-uv pip install -e ".[dev]"
-
-# 4. Create and configure .env
-cp .env.example .env
-# Edit .env with your API keys and repo path
-
-# 5. Start Qdrant (Terminal 1)
-docker-compose up qdrant
-
-# 6. Start MCP server (Terminal 2)
-uv run python -m git_debug_oracle.server
+#### **Option C: Local Installation**
+```bash
+pip install qdrant-client
+# Then configure for local mode in your code
 ```
 
 ## 📋 Prerequisites
 
 **All you need:**
-- Python 3.11+ (or Docker if using Option A)
-- Docker & Docker Compose (for Qdrant vector database)
+- Python 3.11+
+- [uv package manager](https://docs.astral.sh/uv/getting-started/)
+- Qdrant vector database (local Docker, Qdrant Cloud, or local Python instance)
 - Two API keys:
   - **Claude API**: Get from https://console.anthropic.com/account/keys
   - **Embeddings**: Voyage AI (https://www.voyageai.com) or OpenAI (https://platform.openai.com/api-keys)
@@ -128,19 +136,6 @@ Once Oracle is running, you add it to Claude Code as an MCP server. Then Claude 
         "EMBEDDING_API_KEY": "your-embedding-key",
         "REPO_PATH": "/absolute/path/to/your/repo"
       }
-    }
-  }
-}
-```
-
-**Or if using Docker Compose**, simplify to:
-
-```json
-{
-  "mcpServers": {
-    "git-debug-oracle": {
-      "command": "docker-compose",
-      "args": ["exec", "mcp-server", "python", "-m", "git_debug_oracle.server"]
     }
   }
 }
@@ -369,9 +364,9 @@ pre-commit install
 
 **"Cannot connect to Qdrant"**
 ```
-1. Check Qdrant is running: docker-compose ps
+1. Verify Qdrant is running: curl http://localhost:6333/health
 2. Verify QDRANT_HOST and QDRANT_PORT in .env
-3. Restart: docker-compose restart
+3. If not running, start it (see Quick Start: Qdrant Setup)
 ```
 
 **"ANTHROPIC_API_KEY not set"**

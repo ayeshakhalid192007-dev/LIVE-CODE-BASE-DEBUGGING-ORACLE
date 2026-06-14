@@ -70,10 +70,6 @@ git-debug-oracle/
 │       ├── sample_repo/              # Small test repository
 │       ├── error_payloads.json       # Sample error payloads
 │       └── expected_chunks.json      # Expected indexing results
-├── docker/
-│   ├── Dockerfile                    # MCP server Docker image
-│   └── qdrant/
-│       └── config.yaml               # Qdrant configuration
 ├── docs/
 │   ├── mcp_tools.md                  # MCP tool documentation
 │   ├── error_formats.md              # Supported error payload formats
@@ -81,7 +77,6 @@ git-debug-oracle/
 ├── .env.example                      # Example environment variables
 ├── .gitignore
 ├── .pre-commit-config.yaml
-├── docker-compose.yml
 ├── pyproject.toml
 ├── README.md
 ├── LICENSE

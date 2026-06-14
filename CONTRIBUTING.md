@@ -30,8 +30,14 @@ Hooks run automatically before every commit:
 
 ### 4. Start Qdrant for testing
 
+Choose one option:
+
 ```bash
-docker-compose up -d qdrant
+# Option A: Local Docker
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
+
+# Option B: Qdrant Cloud (set QDRANT_HOST and QDRANT_API_KEY in .env)
+# Option C: Local Python instance
 ```
 
 ## Development Workflow

@@ -7,32 +7,59 @@ Get git-debug-oracle running and indexed in under 5 minutes.
 Before starting, ensure you have:
 
 - [ ] Git installed (`git --version`)
-- [ ] Docker and Docker Compose (`docker --version`, `docker-compose --version`)
+- [ ] Python 3.11+ (`python --version`)
+- [ ] uv package manager (`uv --version` or install from https://docs.astral.sh/uv/)
+- [ ] Qdrant running (see Step 1 below)
 - [ ] Claude API key (https://console.anthropic.com/account/keys)
 - [ ] Embedding API key:
   - Voyage AI: https://www.voyageai.com
   - OpenAI: https://platform.openai.com/api-keys
 - [ ] A Git repository to index (local or remote)
 
-## Step 1: Clone the Repository (1 min)
+## Step 1: Start Qdrant (1 min)
+
+Choose one option and start Qdrant in a terminal:
+
+**Option A: Local Docker (easiest)**
+```bash
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
+```
+
+**Option B: Qdrant Cloud**
+Sign up at https://qdrant.tech/cloud/ and get your API key (you'll set it in .env)
+
+**Option C: Local Python**
+```bash
+pip install qdrant-client
+# Configure for local mode in .env
+```
+
+Verify Qdrant is running:
+```bash
+curl http://localhost:6333/health
+```
+
+## Step 2: Clone and Install (1 min)
+
+In a new terminal:
 
 ```bash
 git clone https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE.git
 cd LIVE-CODE-BASE-DEBUGGING-ORACLE
+uv pip install -e ".[dev]"
 ```
 
-## Step 2: Configure Environment (1 min)
+## Step 3: Configure Environment (1 min)
 
 Copy the example environment file:
 
 ```bash
-cp .env.compose .env
+cp .env.example .env
 ```
 
 Edit `.env` and fill in your API keys:
 
 ```bash
-# Edit .env with your preferred editor
 nano .env
 ```
 
@@ -42,33 +69,22 @@ Required fields to update:
 ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
 EMBEDDING_API_KEY=YOUR_EMBEDDING_KEY_HERE
 REPO_PATH=/path/to/your/git/repository
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
 ```
 
-Optional but recommended:
+If using Qdrant Cloud, also set:
+```bash
+QDRANT_API_KEY=your-cloud-api-key
+```
+
+## Step 4: Start MCP Server (1 min)
 
 ```bash
-EMBEDDING_MODEL=voyage-code-2     # or text-embedding-3-small
-WATCH_BRANCH=main
-LOG_LEVEL=INFO
+uv run python -m git_debug_oracle.server
 ```
 
-## Step 3: Start Services (1 min)
-
-```bash
-docker-compose up -d
-```
-
-Verify services are running:
-
-```bash
-docker-compose ps
-```
-
-You should see:
-- `git-debug-oracle-mcp` — Running (status: Up)
-- `git-debug-oracle-qdrant` — Running (status: Up)
-
-Verify health:
+Verify it's running (in another terminal):
 
 ```bash
 curl http://localhost:8000/health
@@ -80,7 +96,7 @@ Expected response:
 {"status": "healthy"}
 ```
 
-## Step 4: Index Your Repository (1-2 min)
+## Step 5: Index Your Repository (1-2 min)
 
 In Claude Code, call the MCP tool:
 
@@ -98,13 +114,14 @@ The tool will:
 3. Generate embeddings for each chunk
 4. Store in Qdrant with commit metadata
 
-Watch the logs:
+Watch the logs (from the terminal running the server):
 
 ```bash
-docker-compose logs -f mcp-server | grep -i "index\|chunk\|embed"
+# Logs will show in the terminal where you ran: uv run python -m git_debug_oracle.server
+# Look for lines with "index", "chunk", "embed"
 ```
 
-## Step 5: Send an Error (Optional)
+## Step 6: Send an Error (Optional)
 
 Test the system with a sample error:
 
@@ -123,43 +140,34 @@ Expected response includes `retrieval_results` and `fix_proposal`.
 
 ## Troubleshooting
 
-### Services won't start
+### Qdrant won't connect
 
-Check logs:
+Check Qdrant is running:
 
 ```bash
-docker-compose logs mcp-server
-docker-compose logs qdrant
+curl http://localhost:6333/health
 ```
 
-Common issues:
-- Missing environment variables: Check `.env` has all required keys
-- Port conflicts: Ensure 8000 and 6333 are available
-- Docker not running: Start Docker daemon
+If using Docker:
+```bash
+docker ps | grep qdrant
+```
+
+If not running, restart it (see Step 1).
+
+### Server won't start
+
+Check error message in terminal. Common issues:
+- Missing environment variables: Verify all required vars in `.env`
+- Port 8000 already in use: Change `WEBHOOK_PORT` in `.env`
+- Qdrant not reachable: Check `QDRANT_HOST` and `QDRANT_PORT`
 
 ### Indexing fails
 
-```bash
-docker-compose logs -f mcp-server
-```
-
-Common issues:
+Check the server logs for errors. Common issues:
 - Invalid `REPO_PATH`: Ensure path exists and is a git repository
-- Embedding API error: Verify `EMBEDDING_API_KEY` is correct
-- Qdrant connection: Verify qdrant service is healthy
-
-### Health check fails
-
-```bash
-docker-compose ps
-```
-
-If services show `Exited`:
-
-```bash
-docker-compose down
-docker-compose up -d
-```
+- Embedding API error: Verify `EMBEDDING_API_KEY` is correct and valid
+- Qdrant connection: Verify Qdrant is running and accessible
 
 ## Next Steps
 
@@ -181,29 +189,3 @@ docker-compose up -d
 - **Better results** — Increase `RECENT_COMMIT_WINDOW` if errors are in old code
 - **More context** — Increase `MAX_CONTEXT_CHUNKS` for better fix quality
 - **Tuning retrieval** — Adjust `TOP_K` and `CHUNK_SIZE` based on your codebase size
-
-## Docker Compose Tips
-
-View logs in real-time:
-
-```bash
-docker-compose logs -f
-```
-
-Restart services:
-
-```bash
-docker-compose restart
-```
-
-Stop services:
-
-```bash
-docker-compose down
-```
-
-Stop and remove volumes (reset everything):
-
-```bash
-docker-compose down -v
-```

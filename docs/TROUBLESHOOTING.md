@@ -4,15 +4,33 @@ Common issues and solutions for git-debug-oracle.
 
 ## Installation & Setup
 
-### Docker not found
+### Python version issue
 
-**Error:** `docker: command not found`
+**Error:** `Python 3.11+ required`
 
 **Solution:**
-1. Install Docker: https://docs.docker.com/get-docker/
-2. Verify: `docker --version`
-3. On Linux, add user to docker group: `sudo usermod -aG docker $USER`
-4. Restart shell: `exec $SHELL`
+```bash
+# Check Python version
+python --version
+
+# If needed, install Python 3.11+
+# macOS: brew install python@3.11
+# Ubuntu: sudo apt install python3.11
+# Windows: https://www.python.org/downloads/
+```
+
+### uv not found
+
+**Error:** `uv: command not found`
+
+**Solution:**
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Verify
+uv --version
+```
 
 ### Port already in use
 
@@ -26,8 +44,8 @@ lsof -i :8000
 # Kill the process
 kill -9 <PID>
 
-# Or use different port
-WEBHOOK_PORT=8001 docker-compose up
+# Or use different port in .env
+WEBHOOK_PORT=8001
 ```
 
 ### Insufficient memory
@@ -36,9 +54,8 @@ WEBHOOK_PORT=8001 docker-compose up
 
 **Solution:**
 1. Check available memory: `free -h`
-2. Increase Docker memory limit
-3. Reduce `MAX_CONTEXT_CHUNKS` in `.env`
-4. Use smaller embedding model
+2. Reduce `MAX_CONTEXT_CHUNKS` in `.env`
+3. Use smaller embedding model (text-embedding-3-small instead of voyage-code-2)
 
 ### REPO_PATH not found
 
@@ -51,7 +68,7 @@ ls -la /path/to/repo
 
 # Use absolute path, not relative
 REPO_PATH=/home/user/my-repo  # ✓ Correct
-REPO_PATH=~/my-repo            # ✗ Wrong
+REPO_PATH=~/my-repo            # ✗ Wrong (use absolute)
 ```
 
 ## Configuration Issues
@@ -68,6 +85,7 @@ nano .env
 # Add your keys
 ANTHROPIC_API_KEY=sk-ant-...
 EMBEDDING_API_KEY=...
+REPO_PATH=/absolute/path/to/repo
 ```
 
 ### Invalid API key
@@ -80,7 +98,7 @@ EMBEDDING_API_KEY=...
    - Claude: https://console.anthropic.com/account/keys
    - Voyage AI: https://www.voyageai.com
    - OpenAI: https://platform.openai.com/api-keys
-3. Update `.env` and restart services
+3. Update `.env` and restart server
 
 ### Invalid configuration value
 
@@ -104,34 +122,39 @@ CHUNK_SIZE=50    # ✗ Too small
 
 **Solution:**
 ```bash
-# Check if service is running
-docker-compose ps
-
-# If not running, start it
-docker-compose up -d qdrant
-
-# Verify connection
+# Check if Qdrant is running
 curl http://localhost:6333/health
 
-# Check logs
-docker-compose logs qdrant
+# If not, start it (choose one):
+
+# Option A: Docker
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
+
+# Option B: Use Qdrant Cloud (update QDRANT_HOST and QDRANT_API_KEY in .env)
+
+# Option C: Local Python
+pip install qdrant-client
 ```
 
-### Qdrant health check failing
+### Qdrant connection timeout
 
-**Error:** `Health check FAILED` in docker-compose ps
+**Error:** `Connection timeout to Qdrant`
 
 **Solution:**
 ```bash
-# Restart service
-docker-compose restart qdrant
+# Verify Qdrant is listening
+netstat -tuln | grep 6333
 
-# Wait 30 seconds and check again
-sleep 30
-docker-compose ps
+# Check firewall
+sudo ufw allow 6333
 
-# If still failing, check logs
-docker-compose logs -f qdrant --tail 50
+# Verify QDRANT_HOST setting
+grep QDRANT_HOST .env
+
+# Restart Qdrant
+# If using Docker:
+docker ps | grep qdrant
+docker restart <container_id>
 ```
 
 ### Collection not found
@@ -140,7 +163,7 @@ docker-compose logs -f qdrant --tail 50
 
 **Solution:**
 1. This is normal on first run — collection is created automatically
-2. Run `index_repo` to create and populate collection
+2. Run `index_repo` tool to create and populate collection
 3. Or verify with: `curl http://localhost:6333/collections`
 
 ## Indexing Issues
@@ -149,265 +172,241 @@ docker-compose logs -f qdrant --tail 50
 
 **Diagnosis:**
 ```bash
-# Monitor progress
-docker-compose logs -f mcp-server | grep -i "chunk\|embed"
+# Check server logs for progress
+# Look for lines with "index", "chunk", "embed"
+
+# Check how many files were processed
+grep -i "processed" server.log
 ```
 
 **Solutions:**
-1. Reduce `CHUNK_SIZE` (faster processing, more chunks)
-2. Reduce `MAX_CONTEXT_CHUNKS` (less context to generate)
-3. Use faster embedding model (`text-embedding-3-small`)
-4. Increase `CHUNK_OVERLAP` to 0 (no overlap)
+1. Larger repos naturally take longer
+2. Incremental indexing is faster than full indexing
+3. Increase `CHUNK_SIZE` to reduce number of chunks
+4. Use faster embedding model (voyage-code-2 is faster than text-embedding-3-small)
 
-### Indexing fails with OutOfMemory
+### Embedding API errors
 
-**Error:** `MemoryError` or `OOMKilled`
-
-**Solutions:**
-1. Reduce chunk size: `CHUNK_SIZE=500`
-2. Reduce batch size in embedder
-3. Increase Docker memory limit
-4. Index smaller repositories first
-
-### No chunks indexed
-
-**Error:** `total_chunks: 0` from `get_index_status`
+**Error:** `Embedding service error: 503 Service Unavailable`
 
 **Solution:**
-1. Verify repository has Python files: `find /repo -name "*.py" | head`
-2. Check file filter settings
-3. View logs: `docker-compose logs mcp-server | grep -i "chunk\|skip"`
+1. Check API key is valid: https://www.voyageai.com/account/api-keys
+2. Check service status:
+   - Voyage AI: https://status.voyageai.com/
+   - OpenAI: https://status.openai.com/
+3. Retry after a few minutes
+4. Check rate limits haven't been exceeded
+
+### File type not supported
+
+**Error:** `Skipping binary file: config.bin` (INFO level, not an error)
+
+**Solution:**
+This is expected. Only text code files are indexed:
+- Supported: `.py`, `.js`, `.ts`, `.java`, `.go`, `.rs`, etc.
+- Not supported: `.bin`, `.png`, `.pdf`, `.zip`, etc.
+
+### Repository not a git repo
+
+**Error:** `Not a git repository: /path/to/directory`
+
+**Solution:**
+```bash
+# Verify it's a git repo
+ls -la /path/to/directory/.git
+
+# If no .git, initialize it
+cd /path/to/directory
+git init
+git add .
+git commit -m "initial commit"
+```
+
+## MCP Server Issues
+
+### Server won't start
+
+**Error:** `Failed to start MCP server` or server exits immediately
+
+**Solution:**
+1. Check all required env vars are set:
+   ```bash
+   grep -E "ANTHROPIC_API_KEY|EMBEDDING_API_KEY|REPO_PATH" .env
+   ```
+2. Verify Qdrant is running
+3. Check logs for specific error:
+   ```bash
+   uv run python -m git_debug_oracle.server 2>&1 | head -50
+   ```
+
+### MCP tools don't appear in Claude Code
+
+**Error:** Tools not listed in MCP tool dropdown
+
+**Solution:**
+1. Verify config in `~/.claude/settings.json` is valid JSON
+2. Check command is correct:
+   ```json
+   "command": "python",
+   "args": ["-m", "git_debug_oracle.server"]
+   ```
+3. Verify environment variables are set in config
+4. Restart Claude Code completely (not just reload)
+5. Check Claude Code logs for MCP errors
+
+### Tool execution times out
+
+**Error:** `Tool call timed out after 30s`
+
+**Solution:**
+1. For indexing: Use incremental indexing (don't force full re-index)
+2. For retrieval: Reduce `TOP_K` or `MAX_CONTEXT_CHUNKS`
+3. For fix generation: Check Claude API status
+4. Increase MCP timeout in Claude Code settings
 
 ## Retrieval Issues
 
 ### No results returned
 
-**Diagnosis:**
-```bash
-# Verify index status
-Tool: get_index_status
-# Should show total_chunks > 0
-```
+**Error:** Query returns empty results or very low scores
 
-**Solutions:**
-1. Index the repository first
-2. Increase `TOP_K` parameter
-3. Adjust query (more specific error messages work better)
-4. Check if file exists in repository
+**Solution:**
+1. Verify repository is indexed: Call `get_index_status` tool
+2. If not indexed, call `index_repo` with `force_full=true`
+3. Check if error matches indexed code:
+   - Is the error file in the indexed repo?
+   - Is the error in a recent commit?
+4. Try broader search terms
 
-### Poor result quality
+### Results are not relevant
 
-**Solutions:**
+**Error:** Top results don't match the error
+
+**Solution:**
 1. Increase `TOP_K` to get more candidates
-2. Adjust `RECENT_COMMIT_WINDOW` if errors are old
-3. Use better embedding model (`voyage-code-2`)
-4. Increase `CHUNK_SIZE` for more context
+2. Increase `RECENT_COMMIT_WINDOW` if error is in older code
+3. Check `EMBEDDING_MODEL` — voyage-code-2 is better than text-embedding-3-small
+4. Try re-indexing with `force_full=true`
 
 ## Fix Generation Issues
 
-### Claude API errors
+### Fix proposal is low confidence
 
-**Error:** `Authentication failed for Claude API`
-
-**Solution:**
-1. Verify API key: `echo $ANTHROPIC_API_KEY`
-2. Check key is valid at: https://console.anthropic.com/account/keys
-3. Verify key format starts with `sk-ant-`
-
-### Low confidence score
-
-**Issue:** Fix proposal has confidence < 0.5
-
-**Explanation:** This can happen when:
-- Retrieval results are poor matches
-- Error information is incomplete
-- Code context is limited
-
-**Solutions:**
-1. Provide more error context (stacktrace)
-2. Index more of the repository
-3. Increase `MAX_CONTEXT_CHUNKS` for more context
-
-### Fix not compiling
-
-**Issue:** Suggested code patch has syntax errors
-
-**Solutions:**
-1. This shouldn't happen — report as bug
-2. Use suggestion as starting point
-3. Increase `MAX_CONTEXT_CHUNKS` for better understanding
-4. Try with different Claude model
-
-## Webhook Issues
-
-### Webhook not receiving requests
-
-**Diagnosis:**
-```bash
-# Check if MCP server is running
-docker-compose ps mcp-server
-
-# Check if port is exposed
-netstat -tulpn | grep 8000
-```
-
-**Solutions:**
-1. Verify MCP server is running: `docker-compose up -d mcp-server`
-2. Verify firewall allows port 8000
-3. Verify webhook URL is correct in monitoring system
-4. Check logs: `docker-compose logs mcp-server`
-
-### Invalid signature error
-
-**Error:** `Invalid signature` when calling webhook
-
-**Solutions:**
-1. If `WEBHOOK_SECRET` not set, remove signature header
-2. If `WEBHOOK_SECRET` is set:
-   - Verify header format: `X-Webhook-Signature: sha256=<hex>`
-   - Recalculate signature with correct secret
-   - Verify body hasn't been modified
-
-### Webhook timeout
-
-**Error:** Request times out after 30 seconds
-
-**Solutions:**
-1. Verify repository is indexed (speeds up retrieval)
-2. Reduce `MAX_CONTEXT_CHUNKS` (less processing)
-3. Increase timeout in your monitoring system
-4. Check server logs for slow operations
-
-## Docker Issues
-
-### Container exits immediately
-
-**Error:** `Container exited with code 1`
+**Error:** Returned fix has `confidence: 0.2`
 
 **Solution:**
-```bash
-# Check logs
-docker-compose logs mcp-server --tail 50
+1. Provide more context in the error message
+2. Include full stacktrace (not just error message)
+3. Increase `MAX_CONTEXT_CHUNKS` to give Claude more code
+4. Check if retrieval found relevant code (see Retrieval Issues)
 
-# Likely missing env var or invalid config
-# Edit .env and restart
-docker-compose restart mcp-server
-```
+### Claude API rate limited
 
-### Volumes not mounting
-
-**Error:** Permission denied when accessing mounted files
+**Error:** `RateLimitError: Rate limit exceeded`
 
 **Solution:**
-```bash
-# Check volume permissions
-ls -la /path/to/repo
+1. Wait a few minutes and retry
+2. Use fewer concurrent calls
+3. Upgrade Claude API plan if needed
+4. Check current usage: https://console.anthropic.com/account/usage
 
-# Ensure readable by user
-chmod 755 /path/to/repo
+### Claude API returns error
 
-# Restart services
-docker-compose down
-docker-compose up -d
-```
-
-### Network issues
-
-**Error:** `Cannot reach service from container`
+**Error:** `APIError: 500 Internal Server Error`
 
 **Solution:**
-```bash
-# Verify network exists
-docker network ls | grep git-debug-oracle
-
-# Inspect network
-docker network inspect git-debug-oracle
-
-# Restart services to recreate network
-docker-compose down
-docker-compose up -d
-```
-
-## MCP Registration Issues
-
-### Tools not appearing
-
-**Solution:**
-1. Verify MCP config syntax is valid JSON
-2. Restart Claude Code / Claude Desktop completely
-3. Check server logs: `docker-compose logs mcp-server`
-4. Verify environment variables are set
-
-### Tool calls failing
-
-**Error:** `Tool execution failed`
-
-**Solutions:**
-1. Check server is running: `docker-compose ps`
-2. Verify connectivity: `curl http://localhost:8000/health`
-3. Check logs for error details
-4. Verify repository is indexed
+1. Check Claude API status: https://status.anthropic.com/
+2. Retry after a few minutes
+3. Check API key is valid and has credits
+4. Try with a different model in `CLAUDE_MODEL`
 
 ## Performance Issues
 
-### Slow indexing
+### Server is slow to respond
 
-**Causes:**
-- Network latency to embedding API
-- Large repository with many files
-- Low system resources
+**Solution:**
+1. Check CPU/memory usage: `top` or `htop`
+2. Check if Qdrant is responsive: `curl http://localhost:6333/health`
+3. Check network latency to Qdrant
+4. Reduce `CHUNK_SIZE` to process fewer chunks
+5. Increase `WEBHOOK_PORT` timeout
 
-**Solutions:**
-- Use faster embedding model
-- Index smaller portions first
-- Reduce `CHUNK_OVERLAP`
-- Increase system RAM/CPU
+### Embedding generation is slow
 
-### Slow retrieval
+**Solution:**
+1. Voyage AI (voyage-code-2) is faster than OpenAI
+2. Use batch processing (automatic)
+3. Reduce `CHUNK_SIZE` to embed fewer tokens per chunk
+4. Check embedding API rate limits
 
-**Causes:**
-- Large number of chunks (slow search)
-- Network latency
+## Database Issues
 
-**Solutions:**
-- Reduce `TOP_K` parameter
-- Optimize `CHUNK_SIZE`
-- Use faster model
+### Qdrant data corruption
 
-### Slow fix generation
+**Error:** `Collection corrupted` or search returns invalid results
 
-**Causes:**
-- Large context (many chunks)
-- API latency
+**Solution:**
+```bash
+# Clear and rebuild index
+QDRANT_COLLECTION=git_debug_oracle_new .env
+# Call index_repo to rebuild
 
-**Solutions:**
-- Reduce `MAX_CONTEXT_CHUNKS`
-- Use faster Claude model
-- Reduce context size
+# Or delete collection via API
+curl -X DELETE http://localhost:6333/collections/git_debug_oracle
+```
+
+### Running out of disk space
+
+**Error:** `No space left on device`
+
+**Solution:**
+```bash
+# Check disk usage
+df -h
+
+# If using local Qdrant via Docker, you can clean up:
+# Find the qdrant container
+docker ps | grep qdrant
+
+# Remove old snapshots (if volume mounted)
+# Or clear the collection and re-index:
+curl -X DELETE http://localhost:6333/collections/git_debug_oracle
+
+# Then re-index
+Tool: index_repo
+```
 
 ## Getting Help
 
-If none of these solutions work:
+If you can't resolve the issue:
 
-1. **Check logs:**
+1. **Check the logs:**
    ```bash
-   docker-compose logs -f --tail 100
+   # Server logs show what's happening
+   # Look for ERROR or WARNING lines
    ```
 
 2. **Verify configuration:**
    ```bash
-   echo $ANTHROPIC_API_KEY
-   echo $EMBEDDING_API_KEY
-   echo $REPO_PATH
+   # Print current config
+   env | grep -E "ANTHROPIC|EMBEDDING|QDRANT|REPO"
    ```
 
 3. **Test connectivity:**
    ```bash
-   curl http://localhost:8000/health
+   # Test Qdrant
    curl http://localhost:6333/health
+   
+   # Test Claude API
+   curl https://api.anthropic.com/v1/messages
    ```
 
-4. **Report issue on GitHub:**
-   - Include error message and logs
-   - Include system info (OS, Docker version)
-   - Include configuration (redact API keys)
+4. **Open an issue:**
+   - GitHub: https://github.com/ayeshakhalid192007-dev/LIVE-CODE-BASE-DEBUGGING-ORACLE/issues
+   - Include: error message, log output, OS version, Python version
+   - Include: steps to reproduce the issue
+
+5. **Read related docs:**
+   - CONFIGURATION.md — All environment variables
+   - docs/MCP_CONFIG.md — MCP setup issues
+   - docs/ERROR_PAYLOADS.md — Error format issues

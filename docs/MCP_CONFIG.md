@@ -40,31 +40,13 @@ Add this to `settings.json`:
 }
 ```
 
-### Step 3: Or use Docker Compose
-
-If running via Docker Compose:
-
-```json
-{
-  "mcpServers": {
-    "git-debug-oracle": {
-      "command": "docker-compose",
-      "args": ["exec", "-T", "mcp-server", "python", "-m", "git_debug_oracle.server"],
-      "env": {
-        "COMPOSE_PROJECT_NAME": "git-debug-oracle"
-      }
-    }
-  }
-}
-```
-
-### Step 4: Restart Claude Code
+### Step 3: Restart Claude Code
 
 - Close Claude Code completely
 - Reopen Claude Code
 - Tools should appear in MCP tool list
 
-### Step 5: Verify
+### Step 4: Verify
 
 Call the health check:
 
@@ -136,30 +118,7 @@ Claude should list git-debug-oracle tools:
 - get_recent_diffs
 - get_index_status
 
-## Docker Compose Variants
-
-### Pre-started services
-
-If Docker Compose services already running:
-
-```json
-{
-  "mcpServers": {
-    "git-debug-oracle": {
-      "command": "docker",
-      "args": [
-        "exec",
-        "git-debug-oracle-mcp",
-        "python",
-        "-m",
-        "git_debug_oracle.server"
-      ]
-    }
-  }
-}
-```
-
-### Remote server
+## Remote server
 
 If Qdrant/MCP running on different machine:
 
@@ -188,10 +147,8 @@ If Qdrant/MCP running on different machine:
 1. Check Claude config syntax (valid JSON)
 2. Verify Python path: `which python` or `python --version`
 3. Verify environment variables are set correctly
-4. Check logs:
-   ```bash
-   docker-compose logs -f mcp-server
-   ```
+4. Check logs in the terminal where MCP server is running
+5. Look for ERROR or WARNING lines
 
 ### Connection errors
 
@@ -217,10 +174,7 @@ If Qdrant/MCP running on different machine:
    Tool: get_index_status
    ```
 
-2. Check logs for errors:
-   ```bash
-   docker-compose logs mcp-server | grep ERROR
-   ```
+2. Check logs for errors in the terminal running the server
 
 3. Verify repository path exists and is readable
 
@@ -344,6 +298,6 @@ Enable debug logging:
 
 Check logs:
 
-```bash
-docker-compose logs -f mcp-server --tail 100
-```
+Logs will appear in the terminal where you ran: `uv run python -m git_debug_oracle.server`
+
+Look for lines with ERROR or WARNING to diagnose issues.

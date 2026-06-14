@@ -61,16 +61,19 @@ Mocking library for pytest. Simplifies mocking external dependencies like Qdrant
 ## Packaging and Distribution
 
 **pyproject.toml with pip install support**
-The project uses pyproject.toml with setuptools backend. Developers can install it via `pip install -e .` for local development or `pip install git+https://github.com/user/git-debug-oracle.git` for direct installation from GitHub.
-
-**Docker image via docker-compose**
-A docker-compose.yml file bundles the MCP server and Qdrant together. Running `docker-compose up` starts both services with correct networking and volume mounts. The MCP server container runs the server process, and the Qdrant container runs the vector database.
+The project uses pyproject.toml with setuptools backend. Developers can install it via `uv pip install -e .` for local development or `uv pip install git+https://github.com/user/git-debug-oracle.git` for direct installation from GitHub.
 
 **MCP config registration**
-Users register the server in their MCP client config. For Claude Desktop, they add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or equivalent on other platforms. For Claude Code, they add it to the MCP servers section of their config. The entry specifies the command to run the server (either `python -m git_debug_oracle.server` or `docker-compose up` depending on installation method) and any required environment variables.
+Users register the server in their MCP client config. For Claude Desktop, they add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or equivalent on other platforms. For Claude Code, they add it to the MCP servers section of their config. The entry specifies the command to run the server: `python -m git_debug_oracle.server` and any required environment variables.
+
+**Qdrant deployment**
+Qdrant is deployed independently by the user. Options:
+- Local Docker: `docker run -p 6333:6333 qdrant/qdrant:latest`
+- Qdrant Cloud: Managed service at https://qdrant.tech/cloud/
+- Local Python instance: `pip install qdrant-client` with local mode
 
 **Environment variable passing**
-When running via Docker, environment variables are passed through docker-compose.yml or a .env file. When running directly via Python, they are loaded from a .env file in the repo root or set in the shell environment.
+Environment variables are loaded from a .env file in the repo root or set in the shell environment. Required variables: ANTHROPIC_API_KEY, EMBEDDING_API_KEY, REPO_PATH, QDRANT_HOST (or QDRANT_API_KEY if using cloud).
 
 ## Logging
 

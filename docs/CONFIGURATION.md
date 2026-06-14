@@ -95,14 +95,15 @@ EMBEDDING_MODEL=voyage-code-2
 **Default:** `localhost`
 **Description:** Hostname or IP address of Qdrant vector database
 
-**Docker Compose:** Use `qdrant` (service name)
-**Local:** Use `localhost` or `127.0.0.1`
+**Local Docker:** Use `localhost` or `127.0.0.1`
+**Qdrant Cloud:** Use your cluster URL
+**Remote server:** Use the server IP or hostname
 
 **Example:**
 ```bash
-QDRANT_HOST=qdrant              # Docker Compose
 QDRANT_HOST=localhost           # Local development
 QDRANT_HOST=192.168.1.100       # Remote server
+QDRANT_HOST=my-cluster.qdrant.io  # Qdrant Cloud
 ```
 
 ### QDRANT_PORT
@@ -344,22 +345,20 @@ Set it: export ANTHROPIC_API_KEY="sk-..."
 Get it: https://console.anthropic.com/account/keys
 ```
 
-## Docker Compose
-
-Override variables in docker-compose.yml:
-
-```yaml
-services:
-  mcp-server:
-    environment:
-      CHUNK_SIZE: "2000"
-      TOP_K: "10"
-```
-
-Or use `.env` file (docker-compose loads automatically):
+**Loading from .env file:**
 
 ```bash
-cp .env.compose .env
-# Edit .env
-docker-compose up
+cp .env.example .env
+# Edit .env with your settings
+export $(cat .env | xargs)
+python -m git_debug_oracle.server
+```
+
+Or set variables in the shell:
+
+```bash
+export ANTHROPIC_API_KEY="sk-..."
+export EMBEDDING_API_KEY="your-key"
+export REPO_PATH="/path/to/repo"
+python -m git_debug_oracle.server
 ```
